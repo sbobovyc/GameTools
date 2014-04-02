@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import os
 import struct
@@ -19,5 +21,5 @@ if infile != None and os.path.splitext(infile)[1][1:].strip() == "ply":
     p.dump(outfile)
     
 else:
-    print "Nothing happened"
+    print("Nothing happened")
     parser.print_help()

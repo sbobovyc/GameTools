@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import struct
 
 # constants
@@ -23,16 +25,16 @@ class PLY:
             x1, y1, z1, x2, y2, z2 = struct.unpack("ffffff", f.read(24))
             while True:
                 entry, = struct.unpack("4s", f.read(4))
-                print "Found entry", entry
+                print("Found entry", entry)
                 if not(entry in SUPPORTED_ENTRY):
                     raise Exception("Unsupported entry type")
                 if entry == SUPPORTED_ENTRY[0]: #MESH
                     # read some unknown data
                     f.read(0x8)
                     triangles, = struct.unpack("<I", f.read(4))
-                    print "Number of triangles:",triangles
+                    print("Number of triangles:",triangles)
                     material_info, = struct.unpack("<I", f.read(4))
-                    print "Material info:", hex(material_info)
+                    print("Material info:", hex(material_info))
                     if material_info in SUPPORTED_FORMAT:
                         if material_info == 0x0404:
                             pass
@@ -41,14 +43,14 @@ class PLY:
                     else:
                         raise Exception("Unsupported material type")
                     material_name_length, = struct.unpack("B", f.read(1))
-                    print hex(material_name_length)
+                    print(hex(material_name_length))
                     material_file = f.read(material_name_length)
-                    print "Material file:", material_file
+                    print("Material file:", material_file)
                 if entry == SUPPORTED_ENTRY[1]: #VERT
                     verts, = struct.unpack("<I", f.read(4))
-                    print "Number of verts: %i at %s" % (verts, hex(f.tell()))
+                    print("Number of verts: %i at %s" % (verts, hex(f.tell())))
                     vertex_description, = struct.unpack("<I", f.read(4))
-                    print "Vertex description:", hex(vertex_description)
+                    print("Vertex description:", hex(vertex_description))
                     for i in range(0, verts):
                         if vertex_description == 0x00010024:
                             vx,vy,vz,nx,ny,nz,U,V = struct.unpack("ffffff4xff", f.read(36))
@@ -59,24 +61,24 @@ class PLY:
                         else:
                             raise Exception("Unknown format: %s" % hex(vertex_description))
                         if verbose:
-                            print "Vertex %i: " % i,vx,vy,vz
+                            print("Vertex %i: " % i,vx,vy,vz)
                         self.positions.append((vx,vy,vz))
                         self.normals.append((nx,ny,nz))
                         self.UVs.append((U,V))
-                    print "Vertex info ends at:",hex(f.tell())
+                    print("Vertex info ends at:",hex(f.tell()))
                 if entry == SUPPORTED_ENTRY[2]: #INDX
                     idx_count, = struct.unpack("<I", f.read(4))
-                    print "Indeces:", idx_count
+                    print("Indeces:", idx_count)
                     for i in range(0, idx_count/3):
                         i0,i1,i2 = struct.unpack("<HHH", f.read(6))
                         if verbose:
-                            print "Face %i:" % i,i0,i1,i2
+                            print("Face %i:" % i,i0,i1,i2)
                         self.indeces.append((i0,i1,i2))
-                    print "Indces end at", hex(f.tell()-1)
+                    print("Indces end at", hex(f.tell()-1))
                     break
 
     def dump(self, outfile):
-        print "Dumping to OBJ"
+        print("Dumping to OBJ")
         with open(outfile, "wb") as f:
             for p in self.positions:
                 f.write('{:s} {:f} {:f} {:f}\n'.format("v", *p))
