@@ -1,0 +1,12 @@
+Set of tools for modding the original Ghost Recon.
+Currently the only tool is rsb_magick.py and the RSB module.
+
+Dependencies:
+Python2.7
+PIL
+
+For creating EXEs:
+pyinstaller
+pywin32
+
+Run RSB_magick.bat to compile the rsb_magick.py into an executable. The executable will be in the directory "dist".
