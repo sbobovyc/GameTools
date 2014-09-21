@@ -4,8 +4,8 @@ import struct
 
 # constants
 PLYMAGICK = "EPLYBNDS"
-SUPPORTED_ENTRY = ["MESH", "VERT", "INDX"]
-SUPPORTED_FORMAT = [0x0644, 0x0604, 0x0404, 0x0704]
+SUPPORTED_ENTRY = ["SKIN", "MESH", "VERT", "INDX"]
+SUPPORTED_FORMAT = [0x0644, 0x0604, 0x0404, 0x0704, 0x0744, 0x0C14]
 
 class PLY:
     def __init__(self, path):
@@ -25,10 +25,19 @@ class PLY:
             x1, y1, z1, x2, y2, z2 = struct.unpack("ffffff", f.read(24))
             while True:
                 entry, = struct.unpack("4s", f.read(4))
-                print("Found entry", entry)
+                print("Found entry %s at %s" % (entry, hex(f.tell())) )
                 if not(entry in SUPPORTED_ENTRY):
                     raise Exception("Unsupported entry type")
-                if entry == SUPPORTED_ENTRY[0]: #MESH
+                if entry == SUPPORTED_ENTRY[0]: #SKIN
+                    # read the number of skins
+                    skins, = struct.unpack("<I", f.read(4))
+                    print("Number of skins: %i at %s" % (skins, hex(f.tell())))
+                    for i in range(0, skins):
+                      skin_name_length, = struct.unpack("B", f.read(1))
+                      print("Skin name length:", hex(skin_name_length))
+                      skin_name = f.read(skin_name_length)
+                      print("Skin name:", skin_name)
+                if entry == SUPPORTED_ENTRY[1]: #MESH
                     # read some unknown data
                     f.read(0x8)
                     triangles, = struct.unpack("<I", f.read(4))
@@ -38,15 +47,20 @@ class PLY:
                     if material_info in SUPPORTED_FORMAT:
                         if material_info == 0x0404:
                             pass
+                        if material_info == 0x0C14:
+                            pass
                         else:
                             vert = f.read(0x4)
                     else:
                         raise Exception("Unsupported material type")
                     material_name_length, = struct.unpack("B", f.read(1))
-                    print(hex(material_name_length))
+                    print("Material name length:", hex(material_name_length))
                     material_file = f.read(material_name_length)
                     print("Material file:", material_file)
-                if entry == SUPPORTED_ENTRY[1]: #VERT
+                    # read some more unknown data
+                    if material_info == 0x0C14:
+                      f.read(3)
+                if entry == SUPPORTED_ENTRY[2]: #VERT
                     verts, = struct.unpack("<I", f.read(4))
                     print("Number of verts: %i at %s" % (verts, hex(f.tell())))
                     vertex_description, = struct.unpack("<I", f.read(4))
@@ -56,6 +70,8 @@ class PLY:
                             vx,vy,vz,nx,ny,nz,U,V = struct.unpack("ffffff4xff", f.read(36))
                         elif vertex_description == 0x00070020:
                             vx,vy,vz,nx,ny,nz,U,V = struct.unpack("ffffffff", f.read(32))
+                        elif vertex_description == 0x00070028:
+                            vx,vy,vz,nx,ny,nz,U,V = struct.unpack("ffffffff8x", f.read(40))
                         elif vertex_description == 0x00070030:
                             vx,vy,vz,nx,ny,nz,U,V = struct.unpack("ffffffff16x", f.read(48))
                         else:
@@ -66,7 +82,7 @@ class PLY:
                         self.normals.append((nx,ny,nz))
                         self.UVs.append((U,V))
                     print("Vertex info ends at:",hex(f.tell()))
-                if entry == SUPPORTED_ENTRY[2]: #INDX
+                if entry == SUPPORTED_ENTRY[3]: #INDX
                     idx_count, = struct.unpack("<I", f.read(4))
                     print("Indeces:", idx_count)
                     for i in range(0, idx_count/3):
