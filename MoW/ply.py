@@ -15,6 +15,7 @@ class PLY:
         self.normals = []
         self.UVs = []
         self.open(self.path)
+        self.material_info = 0x0000
         
     def open(self, peek=False, verbose=False):
         with open(self.path, "rb") as f:
@@ -42,12 +43,12 @@ class PLY:
                     f.read(0x8)
                     triangles, = struct.unpack("<I", f.read(4))
                     print("Number of triangles:",triangles)
-                    material_info, = struct.unpack("<I", f.read(4))
-                    print("Material info:", hex(material_info))
-                    if material_info in SUPPORTED_FORMAT:
-                        if material_info == 0x0404:
+                    self.material_info, = struct.unpack("<I", f.read(4))
+                    print("Material info:", hex(self.material_info))
+                    if self.material_info in SUPPORTED_FORMAT:
+                        if self.material_info == 0x0404:
                             pass
-                        if material_info == 0x0C14:
+                        elif self.material_info == 0x0C14:
                             pass
                         else:
                             vert = f.read(0x4)
@@ -58,7 +59,7 @@ class PLY:
                     material_file = f.read(material_name_length)
                     print("Material file:", material_file)
                     # read some more unknown data
-                    if material_info == 0x0C14:
+                    if self.material_info == 0x0C14:
                       f.read(3)
                 if entry == SUPPORTED_ENTRY[2]: #VERT
                     verts, = struct.unpack("<I", f.read(4))
@@ -89,7 +90,10 @@ class PLY:
                         i0,i1,i2 = struct.unpack("<HHH", f.read(6))
                         if verbose:
                             print("Face %i:" % i,i0,i1,i2)
-                        self.indeces.append((i0,i1,i2))
+                        if self.material_info == 0x0744:
+                          self.indeces.append((i2,i1,i0))
+                        else:
+                          self.indeces.append((i0,i1,i2))
                     print("Indces end at", hex(f.tell()-1))
                     break
 
@@ -108,4 +112,4 @@ class PLY:
                 new_idx = map(lambda x: x+1, idx)
                 # change vertex index order by swapping the first and last indeces
                 f.write('{:s} {:d}/{:d}/{:d} {:d}/{:d}/{:d} {:d}/{:d}/{:d}\n'.format("f", new_idx[2], new_idx[2],
-                new_idx[2], new_idx[1], new_idx[1], new_idx[1], new_idx[0], new_idx[0], new_idx[0]))                
+                new_idx[2], new_idx[1], new_idx[1], new_idx[1], new_idx[0], new_idx[0], new_idx[0]))
