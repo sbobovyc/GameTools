@@ -22,7 +22,7 @@ Created on November 25, 2011
 
 import struct
 import math
-import Image
+from PIL import Image
 
 #TODO Add support to magick number 6 RGB4444
 #TODO Add support to magick number 6 RGB565
