@@ -5,7 +5,7 @@ import bpy
 
 v  = bpy.context.object.data.vertices
 for i in range(0, len(v)):
-    print("Vertex index",v[i].index, "Coordinate", v[i].co, "Normal", v[i].normal)
+    print("Vertex index",v[i].index, "Coordinate", v[i].co, "Normal", v[i].normal, "Selected?", v[i].select)
 
 f = bpy.context.object.data.polygons
 for i in range(0, len(f)):
@@ -19,3 +19,4 @@ for poly in me.polygons:
         vi = me.loops[li].vertex_index
         uv = uv_layer[li].uv
         print("    Loop index %i (Vertex %i) - UV %f %f" % (li, vi, uv.x, uv.y))
+        
