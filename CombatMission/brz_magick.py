@@ -11,9 +11,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
-
+from __future__ import print_function
 import argparse
 import struct
+import StringIO
 import os
 import errno
 import sys
@@ -34,11 +35,10 @@ class brz_file(object):
                 file_name, = struct.unpack("%is" % name_len, f.read(name_len))        
                 dir_len, = struct.unpack("<H", f.read(2))
                 dir_name, = struct.unpack("%is" % dir_len, f.read(dir_len))
+                entry = brz_file_entry(file_name, dir_name, offset)
                 if verbose:
-                    print("offset", hex(offset))
-                    print("name", file_name)
-                    print("dir", dir_name)                    
-                self.brz_file_list.append(brz_file_entry(file_name, dir_name, offset))     
+                    print(entry)
+                self.brz_file_list.append(entry)     
             for i in range(0, count):
                 directory = os.path.join(outdir, self.brz_file_list[i].dir)
                                 
@@ -55,30 +55,57 @@ class brz_file(object):
                     else:
                         f_new.write(f.read())   
                         
-    def pack(self, verbose=False):
-        pass
-        
+    def pack(self, directory, verbose=False):
+        # walk through dirs and get file paths, file sizes and add lengths of file paths
+        buf = StringIO.StringIO()
+        with open(self.path, "wb") as f:
+            f.write(struct.pack("II", 0,0))
+            for dirpath, dirnames, filenames in os.walk(directory):
+                for filename in filenames:
+                    entry = brz_file_entry(filename, dirpath, 0, os.path.getsize(os.path.join(dirpath, filename)))
+                    print(entry)
+                    self.brz_file_list.append(entry)
+            f.seek(4)
+            f.write(struct.pack("<I", len(self.brz_file_list)))
+            offset = f.tell()
+            for entry in self.brz_file_list:
+                offset += len(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), entry.offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
+                with open(os.path.join(entry.dir, entry.name), "rb") as ef:
+                    buf.write(ef.read())
+            for entry in self.brz_file_list:
+                f.write(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
+                offset += entry.file_size
+            f.write(buf.getvalue())
+            
+            
 class brz_file_entry(object):
-    def __init__(self, name, path, offset):
+    def __init__(self, name, path, offset, size=0):
         self.name = name
         self.dir = path
         self.offset = offset
-
+        self.file_size = size
+        
+    def __str__(self):
+        return "%s, %s, 0x%x, %i" % (self.dir, self.name, self.offset, self.file_size)
+    
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Tool that can unpack Combat Mission brz files.')
-    parser.add_argument('outdir', nargs='?', help='Output directory')
+    parser = argparse.ArgumentParser(description='Tool that can unpack/pack Combat Mission brz files.')
+    parser.add_argument('filepath', nargs='?', help='BRZ file or directory')
+    parser.add_argument('-o', '--outdir', default=None, help='Output directory')
     parser.add_argument('-v', '--verbose', default=False, action='store_true', help='Print info as files are unpacked')
     args = parser.parse_args()
-    
+
+    filepath = args.filepath
     #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v100.brz"            
     #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v110.brz"
-    filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v110B.brz"
-
-    outdir = "out"
-    if args.outdir != None:
-        outdir = args.outdir
-    print(outdir)
-    brz_file(filepath).unpack(outdir, args.verbose)
+    #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v110B.brz"
+    outdir = os.path.basename(filepath).split('.')[0] if args.outdir == None else args.outdir            
+    if os.path.isfile(args.filepath):
+        brz_file(filepath).unpack(outdir, args.verbose)    
+    else:
+        indir = os.path.dirname(filepath)
+        outfile = indir + ".brz"
+        #brz_file(outfile).pack(indir)
     
 
 
