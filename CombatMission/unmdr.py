@@ -18,13 +18,13 @@ with open(filepath, "rb") as f:
     for i in range(0, 44):
         unk, = struct.unpack("f", f.read(4))
         #print unk
-    
+    print hex(f.tell())
     vertex_count, = struct.unpack("<I", f.read(4))
-    #print "Face count:", vertex_count/3
+    print "Face count:", vertex_count/3
 
     for i in range(0, vertex_count/3):
         v0, v1, v2 = struct.unpack("<HHH", f.read(6))
-        #print "f",v0+1,v1+1,v2+1
+        print "f",v0+1,v1+1,v2+1
     
     uv_in_section, = struct.unpack("<I", f.read(4))
     #print "UV in section:", uv_in_section
@@ -32,12 +32,13 @@ with open(filepath, "rb") as f:
     
     for i in range(0, uv_in_section/2):     
         u,v = struct.unpack("<ff", f.read(8))        
-        print "v", u,v,0
+        #print "v", u,v,0
         
         
     unk, = struct.unpack("<I", f.read(4))
+    print unk
     for i in range(0, unk):
-        print struct.unpack("f", f.read(4))
+        print i,struct.unpack("f", f.read(4))
     
     print "end of object", hex(f.tell())
 

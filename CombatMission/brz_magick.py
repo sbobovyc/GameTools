@@ -28,7 +28,7 @@ class brz_file(object):
     def unpack(self, outdir, verbose=False):
         with open(self.path, "rb") as f:
             u1,count = struct.unpack("<II", f.read(8))
-            print(u1,count)
+            print("Unknown int: %i, Count: %i" % (u1, count))
             for i in range(0,count):
                 offset, = struct.unpack("<I", f.read(4))
                 name_len, = struct.unpack("<H", f.read(2))
@@ -46,8 +46,9 @@ class brz_file(object):
                 except OSError, err:
                     # Reraise the error unless it's about an already existing directory 
                     if err.errno != errno.EEXIST or not os.path.isdir(directory): 
-                        raise        
-                with open(os.path.join(outdir, self.brz_file_list[i].dir, self.brz_file_list[i].name), "wb") as f_new:
+                        raise
+                new_file = os.path.join(outdir, self.brz_file_list[i].dir, self.brz_file_list[i].name)
+                with open(new_file, "wb") as f_new:
                     f.seek(self.brz_file_list[i].offset)
                     if i != count-1:
                         file_length = self.brz_file_list[i+1].offset - self.brz_file_list[i].offset
@@ -96,15 +97,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     filepath = args.filepath
-    #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v100.brz"            
-    #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v110.brz"
-    #filepath = "C:\Users\sbobovyc\Documents\Battlefront\Combat Mission Battle for Normandy DEMO\Data\Normandy Demo v110B.brz"
     outdir = os.path.basename(filepath).split('.')[0] if args.outdir == None else args.outdir            
     if os.path.isfile(args.filepath):
         brz_file(filepath).unpack(outdir, args.verbose)    
     else:
-        indir = os.path.dirname(filepath)
-        outfile = indir + ".brz"
+        print("Packing does not work yet")
+        #indir = os.path.dirname(filepath)
+        #outfile = indir + ".brz"
         #brz_file(outfile).pack(indir)
     
 
