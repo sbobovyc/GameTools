@@ -6,17 +6,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tool that\'s used to read apitrace raw data dumps of vertex data and print wavefront obj vertices. It can also be used with any other raw data.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('file', nargs='?', help='Raw file')
-    parser.add_argument('-o', '--offset', default=0, help='Offset into file')
-    parser.add_argument('-c', '--count', default=sys.maxint, help='Number of vertices')
+    parser.add_argument('-o', '--offset', default=0x0, help='Offset into file, in hex')
+    parser.add_argument('-c', '--count', type=int, default=sys.maxint, help='Number of vertices')
     
     args = parser.parse_args()    
     path = args.file
-    offset = args.offset
+    offset = int(args.offset, 16)
     count = args.count
-    if len(sys.argv) >= 3:
-        offset = int(sys.argv[2], 16)
-    if len(sys.argv) == 4:
-        count = int(sys.argv[3])*3*4
+    if count != sys.maxint:
+        count = args.count*3*4
         
     byte_count = 0
     with open(path, 'rb') as f:
