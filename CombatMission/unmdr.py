@@ -8,6 +8,21 @@ import sys
 filepath = "rpg-7v1-lod-5.mdr"
 #filepath = "rpg-7v1.mdr"
 
+
+########
+# perhaps:
+# object
+# UVs
+# face indices
+# then,
+# object
+# vertices (in object space)
+####
+
+#
+# ak-74m-lod-2.mdr
+# number of floats/3 = number of vertices
+
 with open(filepath, "rb") as f:
     num_models,name_length = struct.unpack("<IxH", f.read(7))
     #print "number of models", num_models
@@ -42,3 +57,6 @@ with open(filepath, "rb") as f:
     
     print "end of object", hex(f.tell())
 
+# ak-74.mdr
+# offset 0x27cf is number of floats (num/3 = vertices), followed by x,y,z
+# rifle, unknown, then magazine model
