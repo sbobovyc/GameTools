@@ -5,6 +5,8 @@ filepath = "ak-74-lod-2.mdr"
 #filepath = "simple\\binoculars.mdr"
 #filepath = "simple\\grenade-missile.mdr"
 #filepath = "simple\\rdg-2.mdr"
+#filepath = r"simple\mines sign.mdr"
+#filepath = "simple\\rpg-22-lod-3.mdr"
 ########
 # perhaps:
 # object
@@ -19,6 +21,9 @@ filepath = "ak-74-lod-2.mdr"
 # ak-74m-lod-2.mdr
 # number of floats/3 = number of vertices
 
+is_dump = False
+
+print "#",filepath
 with open(filepath, "rb") as f:
     num_models,name_length = struct.unpack("<IxH", f.read(7))
     print "# number of models", num_models
@@ -36,8 +41,7 @@ with open(filepath, "rb") as f:
 
     for i in range(0, face_count/3):
         v0, v1, v2 = struct.unpack("<HHH", f.read(6))
-        #print "f",v0+1,v1+1,v2+1
-        print "f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1)
+        if is_dump: print "f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1)
     print "# Finished face vertex indices", hex(f.tell())
     
 
@@ -48,7 +52,7 @@ with open(filepath, "rb") as f:
     
     for i in range(0, uv_in_section/2):     
         u,v = struct.unpack("<ff", f.read(8))        
-        print "vt", u,v
+        if is_dump: print "vt", u,v
     print "# Finish UV section:", hex(f.tell())
     
 
@@ -65,28 +69,31 @@ with open(filepath, "rb") as f:
     object_type, = struct.unpack("<I", f.read(4)) # can be 0,1 or 2    
     print "# read 4 bytes, object type?: ", object_type
 
-    if object_type != 2:
+    if object_type == 1:
         print "Type %i not supported yet" % object_type
-        sys.exit()
+        sys.exit()        
+    elif object_type == 2:
+        name_length, = struct.unpack("<H", f.read(2))
+        model_class = f.read(name_length)
+        print "#Some matrix?", model_class
+        for i in range(0, 0x30/4):
+            print "#",hex(f.tell()),i,struct.unpack("f", f.read(4))
+        print "#End matrix", hex(f.tell())
 
-    name_length, = struct.unpack("<H", f.read(2))
-    model_class = f.read(name_length)
-    print "#Some matrix?", model_class
-    for i in range(0, 0x30/4):
-        print "#",hex(f.tell()),i,struct.unpack("f", f.read(4))
-    print "#End matrix", hex(f.tell())
+        name_length, = struct.unpack("<H", f.read(2))
+        model_class = f.read(name_length)
+        print "#Some matrix?", model_class
+        for i in range(0, 0x30/4):
+            print "#",i,struct.unpack("f", f.read(4))
+        print "#End matrix", hex(f.tell())
 
-    name_length, = struct.unpack("<H", f.read(2))
-    model_class = f.read(name_length)
-    print "#Some matrix?", model_class
-    for i in range(0, 0x30/4):
-        print "#",i,struct.unpack("f", f.read(4))
-    print "#End matrix", hex(f.tell())
-
-    print "#Start some unknown"
-    for i in range(0, 26):
-        print "#",i,struct.unpack("f", f.read(4))
-    print "#End unknown", hex(f.tell())
+        print "#Start some unknown"
+        for i in range(0, 26):
+            print "#",i,struct.unpack("f", f.read(4))
+        print "#End unknown", hex(f.tell())        
+    elif object_type == 0:
+        print "# Reading some metadata of size 0x68"
+        f.read(0x68)        
 
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
@@ -104,7 +111,7 @@ with open(filepath, "rb") as f:
     print "#Vertices", vertex_floats/3
     for i in range(0, vertex_floats/3):        
         x,y,z = struct.unpack("fff", f.read(12))
-        print "v",x,y,z
+        if is_dump: print "v",x,y,z
     print "#End vertices", hex(f.tell())
 
     print "#Start uknown"
