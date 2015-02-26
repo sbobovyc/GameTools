@@ -1,12 +1,15 @@
 import struct
 import sys
 
-filepath = "ak-74-lod-2.mdr"
-#filepath = "simple\\binoculars.mdr"
-#filepath = "simple\\grenade-missile.mdr"
-#filepath = "simple\\rdg-2.mdr"
-#filepath = r"simple\mines sign.mdr"
-#filepath = "simple\\rpg-22-lod-3.mdr"
+filepath = "ak-74-lod-2.mdr"            # type 2
+#filepath = "simple\\binoculars.mdr"     # type 0
+#filepath = "simple\\rdg-2.mdr"         # type 0
+#filepath = r"simple\mines sign.mdr"    # type 0
+#filepath = "simple\\rpg-22-lod-3.mdr"  # type 0
+#filepath = "simple\\grenade-missile.mdr"# type 1
+#filepath = "simple\\at-3-missile.mdr"   # type 1
+#filepath = "simple\\rpo-m-atgm.mdr"   # type 1
+
 ########
 # perhaps:
 # object
@@ -17,11 +20,7 @@ filepath = "ak-74-lod-2.mdr"
 # vertices (in object space)
 ####
 
-#
-# ak-74m-lod-2.mdr
-# number of floats/3 = number of vertices
-
-is_dump = False
+is_dump = True
 
 print "#",filepath
 with open(filepath, "rb") as f:
@@ -70,9 +69,12 @@ with open(filepath, "rb") as f:
     print "# read 4 bytes, object type?: ", object_type
 
     if object_type == 1:
-        print "Type %i not supported yet" % object_type
-        sys.exit()        
+        print "# Object type 1, reading some metadata"
+        length, = struct.unpack("<H", f.read(2))
+        print "# meta data name", f.read(length)
+        f.read(0x98)                
     elif object_type == 2:
+        print "# Object type 2"
         name_length, = struct.unpack("<H", f.read(2))
         model_class = f.read(name_length)
         print "#Some matrix?", model_class
@@ -92,7 +94,7 @@ with open(filepath, "rb") as f:
             print "#",i,struct.unpack("f", f.read(4))
         print "#End unknown", hex(f.tell())        
     elif object_type == 0:
-        print "# Reading some metadata of size 0x68"
+        print "# Object type 1, reading some metadata of size 0x68"
         f.read(0x68)        
 
     f.read(4) # 0
