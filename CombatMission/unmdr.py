@@ -1,14 +1,17 @@
 import struct
 import sys
 
-filepath = "ak-74-lod-2.mdr"            # type 2
-#filepath = "simple\\binoculars.mdr"     # type 0
-#filepath = "simple\\rdg-2.mdr"         # type 0
+filepath = "simple\\ak-74-lod-2.mdr"    # type 2, 3 models
+#filepath = "simple\\ak-74.mdr"         # type 2, 3 models
+#filepath = "simple\\binoculars.mdr"    # type 0, 1 model
+#filepath = "simple\\rdg-2.mdr"          # type 0, 1 model
+#filepath ="simple\\grenade-anm8.mdr",   # type 0, 
 #filepath = r"simple\mines sign.mdr"    # type 0
 #filepath = "simple\\rpg-22-lod-3.mdr"  # type 0
-#filepath = "simple\\grenade-missile.mdr"# type 1
-#filepath = "simple\\at-3-missile.mdr"   # type 1
-#filepath = "simple\\rpo-m-atgm.mdr"   # type 1
+#filepath = "simple\\grenade-missile.mdr"# type 1, 
+#filepath = "simple\\at-3-missile.mdr"   # type 1, 
+#filepath = "simple\\rpo-m-atgm.mdr"   # type 1,
+
 
 ########
 # perhaps:
@@ -22,13 +25,14 @@ filepath = "ak-74-lod-2.mdr"            # type 2
 
 is_dump = True
 
-print "#",filepath
-with open(filepath, "rb") as f:
-    num_models,name_length = struct.unpack("<IxH", f.read(7))
-    print "# number of models", num_models
+
+        
+def dump_model(f):
+    print "# Start model ##############################################################"    
+    name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
     model_class = f.read(name_length)
-    #print "model class", model_class
+    print "# model class", model_class
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
@@ -123,11 +127,12 @@ with open(filepath, "rb") as f:
         unk, = struct.unpack("<H", f.read(2))
         #print "#",i, unk
     print "#End uknown", hex(f.tell())
-
+    print "# End model ##############################################################"
     f.read(4) # 0
     f.read(1)
 
-    sys.exit(0)
+    #sys.exit(0)
+    """
     print "###############################################################"
     print "#Start second model"
     name_length, = struct.unpack("<H", f.read(2))
@@ -166,3 +171,12 @@ with open(filepath, "rb") as f:
         print "#",i,struct.unpack("ff", f.read(8))
     
     print "# End unknown section", hex(f.tell())
+    """
+
+if __name__ == "__main__":
+    print "#",filepath
+    with open(filepath, "rb") as f:
+        num_models, = struct.unpack("<Ix", f.read(5))
+        print "# number of models", num_models
+        for i in range(0, 1):
+            dump_model(f)
