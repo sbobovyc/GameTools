@@ -1,5 +1,10 @@
 from __future__ import print_function
 
+"""@package unmdr
+Documentation for this module. 
+More details.
+"""
+
 """
 Copyright (C) 2014 Stanislav Bobovych
 This program is free software: you can redistribute it and/or modify
@@ -20,17 +25,42 @@ import argparse
 
 
 ########
-# perhaps:
-# object
-# UVs
+# object:
 # face indices
+# UVs,
 # then,
-# object
-# vertices (in object space)
+# vertices (in object space?)
 ####
 
+class MDR_Object:
+    """MDR object
+    """
+    def __init__(self, name):
+        """The constructor takes a model name as parameter. All other variables are set
+        directly.
+        """
+        self.name = name
+        self.index_array = []   # [ (i,i,i) ...]
+        self.uv_array = []      # [ (f,f) ...]        
+        self.vertex_array = []  # [ (f,f,f) ...]        
+        self.texture_name = ""
+        #TODO add meta data objects
+
+    def make_wavefront_obj(self):
+        """ Serialize mdr to obj format and return it as a string."""        
+        string = ""
+        string += "# Object: %s\n" % self.name
+        for idx in self.index_array:
+            string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
+        for uv in self.uv_array:
+            string += "vt %s %s\n" % (uv[0], uv[1])            
+        for vert in self.vertex_array:
+            string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
+
+        return string
+    
         
-def dump_model(base_name, f, model_number, is_dump = True):    
+def dump_model(base_name, f, model_number, dump = True):    
     print("# Start model ##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
@@ -39,7 +69,11 @@ def dump_model(base_name, f, model_number, is_dump = True):
 
     # output file
     fout = None
-    if is_dump: fout = open("%s_%s.obj" % (base_name, submodel_name), 'wb')
+    mdr_obj = None
+    
+    if dump:
+        fout = open("%s_%s.obj" % (base_name, submodel_name), 'wb')
+        mdr_obj = MDR_Object(submodel_name)
     
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
@@ -53,9 +87,13 @@ def dump_model(base_name, f, model_number, is_dump = True):
     face_count, = struct.unpack("<I", f.read(4))
     print("# Face count:", face_count/3)
 
-    for i in range(0, face_count/3):
-        v0, v1, v2 = struct.unpack("<HHH", f.read(6))
-        if is_dump: print("f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1), file=fout)
+    for i in range(0, face_count/3):        
+        if not dump:
+            f.read(6)
+        else:
+            v0, v1, v2 = struct.unpack("<HHH", f.read(6))
+            #print("f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1), file=fout)
+            mdr_obj.index_array.append((v0,v1,v2))
     print("# Finished face vertex indices", hex(f.tell()))
     ###############################################
 
@@ -64,9 +102,13 @@ def dump_model(base_name, f, model_number, is_dump = True):
     uv_in_section, = struct.unpack("<I", f.read(4))
     print("# UV in section:", uv_in_section)
         
-    for i in range(0, uv_in_section/2):     
-        u,v = struct.unpack("<ff", f.read(8))        
-        if is_dump: print("vt", u,v, file=fout)
+    for i in range(0, uv_in_section/2):
+        if not dump:
+            f.read(8)
+        else:
+            u,v = struct.unpack("<ff", f.read(8))        
+            #print("vt", u,v, file=fout)
+            mdr_obj.uv_array.append((u,v))                    
     print("# Finish UV section:", hex(f.tell()))
     ###############################################    
 
@@ -134,9 +176,13 @@ def dump_model(base_name, f, model_number, is_dump = True):
     print( "#Start vertices")
     vertex_floats, = struct.unpack("<I", f.read(4))
     print( "#Vertices", vertex_floats/3)
-    for i in range(0, vertex_floats/3):        
-        x,y,z = struct.unpack("fff", f.read(12))
-        if is_dump: print( "v",x,y,z, file=fout)
+    for i in range(0, vertex_floats/3):
+        if not dump:
+            f.read(12)
+        else:
+            x,y,z = struct.unpack("fff", f.read(12))
+            #print( "v",x,y,z, file=fout)
+            mdr_obj.vertex_array.append((x,y,z))
     print( "#End vertices", hex(f.tell()))
     ###############################################
     
@@ -151,8 +197,9 @@ def dump_model(base_name, f, model_number, is_dump = True):
     f.read(4) # 0
     f.read(1)
 
-    if is_dump: fout.close()
-
+    if dump: 
+        print(mdr_obj.make_wavefront_obj(), file=fout)
+        fout.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
