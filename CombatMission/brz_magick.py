@@ -28,7 +28,8 @@ class brz_file(object):
     def unpack(self, outdir, verbose=False):
         with open(self.path, "rb") as f:
             u1,count = struct.unpack("<II", f.read(8))
-            print("Unknown int: %i, Count: %i" % (u1, count))
+            #print("Unknown int: %i)
+            print("File count: %i" % (u1, count))
             for i in range(0,count):
                 offset, = struct.unpack("<I", f.read(4))
                 name_len, = struct.unpack("<H", f.read(2))
@@ -92,19 +93,23 @@ class brz_file_entry(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tool that can unpack/pack Combat Mission brz files.')
     parser.add_argument('filepath', nargs='?', help='BRZ file or directory')
+    parser.add_argument('-x', '--extract', default=False, action='store_true', help="Unpack brz file")
+    parser.add_argument('-c', '--compress', default=False, action='store_true', help="Pack files into brz")
     parser.add_argument('-o', '--outdir', default=None, help='Output directory')
     parser.add_argument('-v', '--verbose', default=False, action='store_true', help='Print info as files are unpacked')
     args = parser.parse_args()
-
+    
     filepath = args.filepath
-    outdir = os.path.basename(filepath).split('.')[0] if args.outdir == None else args.outdir            
-    if os.path.isfile(args.filepath):
+    outdir = os.getcwd() if args.outdir == None else args.outdir            
+    if args.extract and not args.compress:
         brz_file(filepath).unpack(outdir, args.verbose)    
+    elif args.compress and not args.extract:
+        indir = os.path.dirname(filepath)
+        outfile = indir + ".brz"
+        brz_file(outfile).pack(indir)
     else:
-        print("Packing does not work yet")
-        #indir = os.path.dirname(filepath)
-        #outfile = indir + ".brz"
-        #brz_file(outfile).pack(indir)
+        print("Unknown command")
+        parser.print_help()
     
 
 
