@@ -29,11 +29,8 @@ import argparse
 # vertices (in object space)
 ####
 
-is_dump = True
-
-
         
-def dump_model(base_name, f, model_number):    
+def dump_model(base_name, f, model_number, is_dump = True):    
     print("# Start model ##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
@@ -41,7 +38,8 @@ def dump_model(base_name, f, model_number):
     print("# submodel name", submodel_name)
 
     # output file
-    fout = open("%s_%s.obj" % (base_name, submodel_name), 'wb')
+    fout = None
+    if is_dump: fout = open("%s_%s.obj" % (base_name, submodel_name), 'wb')
     
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
@@ -153,14 +151,15 @@ def dump_model(base_name, f, model_number):
     f.read(4) # 0
     f.read(1)
 
-    fout.close()
+    if is_dump: fout.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
+    parser.add_argument('-p', '--parse-only', default=False, action='store_true', help='Only parse file, do not dump models')
     parser.add_argument('file', nargs='?', help='Input file')
     args = parser.parse_args()
-
+    
     filepath = None
     if args.file == None:            
         #filepath = "simple\\ak-74-lod-2.mdr"    # type 2, 3 models
@@ -186,4 +185,4 @@ if __name__ == "__main__":
         num_models, = struct.unpack("<Ix", f.read(5))
         print( "# number of models", num_models)
         for i in range(0, num_models):
-            dump_model(base_name, f, i)
+            dump_model(base_name, f, i, not args.parse_only)
