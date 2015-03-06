@@ -157,9 +157,21 @@ def dump_model(base_name, f, model_number, dump = True):
             f.read(0x68)        
     else:
         length, = struct.unpack("<xxH", f.read(4))
-        print( "# unknown meta", f.read(length))
-        f.read(0xCC)
-        print( "# unknown meta finished", hex(f.tell()))
+        unknown_meta = f.read(length)
+        print( "# unknown meta2", unknown_meta)
+        if unknown_meta == "base2": #TODO parse base2 better
+            f.read(0x60)
+            count, = struct.unpack("<I", f.read(4))
+            print("# count", count)
+            for i in range(0, count):
+                length, = struct.unpack("<H", f.read(2))
+                unknown_meta = f.read(length)
+                print("# Sub unknown meta", unknown_meta)
+                f.read(0x30)
+            f.read(0x68)            
+        else:
+            f.read(0xCC)
+        print( "# unknown meta finished", hex(f.tell()))        
         
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
@@ -186,13 +198,13 @@ def dump_model(base_name, f, model_number, dump = True):
     print( "#End vertices", hex(f.tell()))
     ###############################################
     
-    print( "#Start uknown")
+    print( "#Start unknown")
     count, = struct.unpack("<I", f.read(4))
-    print( "# Uknown count", count)
+    print( "# Unknown count", count)
     for i in range(0, count):
         unk, = struct.unpack("<H", f.read(2))
         #print( "#",i, unk)
-    print( "#End uknown", hex(f.tell()))
+    print( "#End unknown", hex(f.tell()))
     print( "# End model ##############################################################")
     f.read(4) # 0
     f.read(1)
