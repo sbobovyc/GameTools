@@ -49,7 +49,7 @@ class MDR_Object:
     def make_wavefront_obj(self):
         """ Serialize mdr to obj format and return it as a string."""        
         string = ""
-        string += "# Object: %s\n" % self.name
+        string += "o %s\n" % self.name
         for idx in self.index_array:
             string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
         for uv in self.uv_array:
