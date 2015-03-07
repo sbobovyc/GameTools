@@ -29,7 +29,7 @@ class brz_file(object):
         with open(self.path, "rb") as f:
             u1,count = struct.unpack("<II", f.read(8))
             #print("Unknown int: %i)
-            print("File count: %i" % (u1, count))
+            print("File count: %i" % (count))
             for i in range(0,count):
                 offset, = struct.unpack("<I", f.read(4))
                 name_len, = struct.unpack("<H", f.read(2))
