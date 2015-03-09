@@ -12,6 +12,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import print_function
+from __future__ import division
 import argparse
 import struct
 import StringIO
@@ -19,7 +20,11 @@ import os
 import errno
 import sys
 
-class brz_file(object):
+def update_progress(progress):
+    sys.stdout.write('\r[{bar: <10}] {percent}%'.format(bar='#'*int(progress*10), percent=int(progress*100)))
+    sys.stdout.flush()
+
+class brz_file:
     def __init__(self, path):
         self.path = path
         self.file_count = 0
@@ -40,7 +45,7 @@ class brz_file(object):
                 if verbose:
                     print(entry)
                 self.brz_file_list.append(entry)     
-            for i in range(0, count):
+            for i in range(0, count):                
                 directory = os.path.join(outdir, self.brz_file_list[i].dir)
                                 
                 try: os.makedirs(directory)
@@ -55,7 +60,8 @@ class brz_file(object):
                         file_length = self.brz_file_list[i+1].offset - self.brz_file_list[i].offset
                         f_new.write(f.read(file_length))
                     else:
-                        f_new.write(f.read())   
+                        f_new.write(f.read())
+                update_progress(i/count)
                         
     def pack(self, directory, verbose=False):
         # walk through dirs and get file paths, file sizes and add lengths of file paths
@@ -64,7 +70,8 @@ class brz_file(object):
             f.write(struct.pack("II", 0,0))
             for dirpath, dirnames, filenames in os.walk(directory):
                 for filename in filenames:
-                    entry = brz_file_entry(filename, dirpath, 0, os.path.getsize(os.path.join(dirpath, filename)))
+                    rel_dir_path = os.path.relpath(dirpath, os.path.dirname(directory))
+                    entry = brz_file_entry(filename, rel_dir_path, 0, os.path.getsize(os.path.join(dirpath, filename)))
                     print(entry)
                     self.brz_file_list.append(entry)
             f.seek(4)
@@ -72,9 +79,9 @@ class brz_file(object):
             offset = f.tell()
             for entry in self.brz_file_list:
                 offset += len(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), entry.offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
-                with open(os.path.join(entry.dir, entry.name), "rb") as ef:
+                with open(os.path.join(os.path.dirname(directory), entry.dir, entry.name), "rb") as ef:
                     buf.write(ef.read())
-            for entry in self.brz_file_list:
+            for entry in self.brz_file_list:                
                 f.write(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
                 offset += entry.file_size
             f.write(buf.getvalue())
@@ -104,9 +111,9 @@ if __name__ == '__main__':
     if args.extract and not args.compress:
         brz_file(filepath).unpack(outdir, args.verbose)    
     elif args.compress and not args.extract:
-        indir = os.path.dirname(filepath)
+        indir = os.path.split(filepath)[1]
         outfile = indir + ".brz"
-        brz_file(outfile).pack(indir)
+        brz_file(outfile).pack(filepath)
     else:
         print("Unknown command")
         parser.print_help()
