@@ -50,6 +50,11 @@ class MDR_Object:
         """ Serialize mdr to obj format and return it as a string."""        
         string = ""
         string += "o %s\n" % self.name
+        # write material info
+        string += "mtllib %s\n" % self.name
+        string += "usemtl Diffuse\n"
+
+        # write vertex info
         for idx in self.index_array:
             string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
         for uv in self.uv_array:
@@ -58,22 +63,39 @@ class MDR_Object:
             string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
 
         return string
+
+    def make_wavefront_mtl(self):
+        """ Create a material definitin file."""
+        string = ""
+        string += "newmtl Diffuse\n"
+        string += "Ka 0.5 0.5 0.5 # gray\n"   # ambient color
+        string += "Kd 0.5 0.5 0.5 # gray\n"   # diffuse color
+        string += "Ks 0.0 0.0 0.0\n"          # specular color, off
+        string += "Ns 0.0\n"                  # specular exponent
+        string += "d 1.0\n"                   # transparency        
+        string += "illum 1\n"                 # Color on and Ambient on
+        string += "map_Kd %s.bmp\n" % self.texture_name
+        return string
     
         
-def dump_model(base_name, f, model_number, dump = True):    
+def dump_model(base_name, f, model_number, outdir, dump = True):    
     print("# Start model ##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
     submodel_name = f.read(name_length)
     print("# submodel name", submodel_name)
 
-    # output file
-    fout = None
+    # output files
+    obj_fout = None
+    mtl_fout = None
+    
+    # object
     mdr_obj = None
     
     if dump:
-        fout = open("%s_%s.obj" % (base_name, submodel_name), 'wb')
-        mdr_obj = MDR_Object(submodel_name)
+        obj_fout = open(os.path.join(outdir, "%s_%s.obj" % (base_name, submodel_name)), 'wb')
+        mtl_fout = open(os.path.join(outdir, "%s_%s.mtl" % (base_name, submodel_name)), 'wb')
+        mdr_obj = MDR_Object("%s_%s" % (base_name, submodel_name))
     
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
@@ -92,7 +114,7 @@ def dump_model(base_name, f, model_number, dump = True):
             f.read(6)
         else:
             v0, v1, v2 = struct.unpack("<HHH", f.read(6))
-            #print("f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1), file=fout)
+            #print("f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1))
             mdr_obj.index_array.append((v0,v1,v2))
     print("# Finished face vertex indices", hex(f.tell()))
     ###############################################
@@ -107,7 +129,7 @@ def dump_model(base_name, f, model_number, dump = True):
             f.read(8)
         else:
             u,v = struct.unpack("<ff", f.read(8))        
-            #print("vt", u,v, file=fout)
+            #print("vt", u,v)
             mdr_obj.uv_array.append((u,v))                    
     print("# Finish UV section:", hex(f.tell()))
     ###############################################    
@@ -175,8 +197,8 @@ def dump_model(base_name, f, model_number, dump = True):
         
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
-    texture_name = f.read(name_length)
-    print( "#Texture name", texture_name)
+    mdr_obj.texture_name = f.read(name_length)
+    print( "#Texture name", mdr_obj.texture_name)
 
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
@@ -193,7 +215,7 @@ def dump_model(base_name, f, model_number, dump = True):
             f.read(12)
         else:
             x,y,z = struct.unpack("fff", f.read(12))
-            #print( "v",x,y,z, file=fout)
+            #print( "v",x,y,z)
             mdr_obj.vertex_array.append((x,y,z))
     print( "#End vertices", hex(f.tell()))
     ###############################################
@@ -210,19 +232,23 @@ def dump_model(base_name, f, model_number, dump = True):
     f.read(1)
 
     if dump: 
-        print(mdr_obj.make_wavefront_obj(), file=fout)
-        fout.close()
+        print(mdr_obj.make_wavefront_obj(), file=obj_fout)
+        print(mdr_obj.make_wavefront_mtl(), file=mtl_fout)
+        obj_fout.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
     parser.add_argument('-p', '--parse-only', default=False, action='store_true', help='Only parse file, do not dump models')
+    parser.add_argument('-o', '--outdir', default=os.getcwd(), help='Output path')
     parser.add_argument('file', nargs='?', help='Input file')
     args = parser.parse_args()
-    
+
     filepath = None
-    if args.file == None:            
+    if args.file == None:
+        print("Error, supply a file as parameter")
+        sys.exit()
         #filepath = "simple\\ak-74-lod-2.mdr"    # type 2, 3 models
-        filepath = "simple\\ak-74.mdr"         # type 2, 3 models
+        #filepath = "simple\\ak-74.mdr"         # type 2, 3 models
         #filepath = "simple\\binoculars.mdr"    # type 0, 1 model
         #filepath = "simple\\rdg-2.mdr"          # type 0, 1 model
         #filepath ="simple\\grenade-anm8.mdr",   # type 0, 
@@ -244,4 +270,4 @@ if __name__ == "__main__":
         num_models, = struct.unpack("<Ix", f.read(5))
         print( "# number of models", num_models)
         for i in range(0, num_models):
-            dump_model(base_name, f, i, not args.parse_only)
+            dump_model(base_name, f, i, args.outdir, not args.parse_only)
