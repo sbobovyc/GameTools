@@ -181,24 +181,48 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print( "# unknown meta2", unknown_meta)
-        if unknown_meta == "base2": #TODO parse base2 better
+        if unknown_meta == "weapon" or unknown_meta == "tripod" or unknown_meta == "base2": 
+            print("Reading", unknown_meta)
             f.read(0x60)
             count, = struct.unpack("<I", f.read(4))
-            print("# count", count)
-            for i in range(0, count):
-                length, = struct.unpack("<H", f.read(2))
-                unknown_meta = f.read(length)
-                print("# Sub unknown meta", unknown_meta)
-                f.read(0x30)
-            f.read(0x68)            
+            print("# Count", count)
+            if count == 0:
+                f.read(0x68)
+            else:
+                for i in range(0, count):
+                    length, = struct.unpack("<H", f.read(2))
+                    unknown_meta2 = f.read(length)
+                    print("Sub-meta", unknown_meta2)
+                    if unknown_meta2 == "eject":
+                        f.read(0x68)
+                        print("#End of sub-meta", hex(f.tell()))
+                    elif unknown_meta2 == "muzzle":
+                        f.read(0x30)
+                        print("#End of sub-meta", hex(f.tell()))
+                    elif unknown_meta2 == "link":
+                        f.read(0x30)
+                        print("#End of sub-meta", hex(f.tell()))
+                    elif length == 0:
+                        print("#End of sub-meta", hex(f.tell()))
+                    else:                        
+                        f.read(0x30)
+                        print("#End of sub-meta", hex(f.tell()))
+                if unknown_meta == "weapon":
+                    f.read(0x68)
+                elif unknown_meta == "base2":
+                    f.read(0x66)
+                else:
+                    f.read(0x30)
         else:
             f.read(0xCC)
         print( "# unknown meta finished", hex(f.tell()))        
         
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
-    mdr_obj.texture_name = f.read(name_length)
-    print( "#Texture name", mdr_obj.texture_name)
+    texture_name = f.read(name_length)
+    print( "#Texture name", texture_name)
+    if dump:
+        mdr_obj.texture_name = texture_name
 
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
