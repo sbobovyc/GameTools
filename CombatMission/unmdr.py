@@ -181,7 +181,7 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print( "# unknown meta2", unknown_meta)
-        if unknown_meta == "weapon" or unknown_meta == "tripod" or unknown_meta == "base2": 
+        if unknown_meta == "weapon" or unknown_meta == "tripod" or unknown_meta == "base2" or unknown_meta == "base3": 
             print("Reading", unknown_meta)
             f.read(0x60)
             count, = struct.unpack("<I", f.read(4))
@@ -194,7 +194,7 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
                     unknown_meta2 = f.read(length)
                     print("Sub-meta", unknown_meta2)
                     if unknown_meta2 == "eject":
-                        f.read(0x68)
+                        f.read(0x30)
                         print("#End of sub-meta", hex(f.tell()))
                     elif unknown_meta2 == "muzzle":
                         f.read(0x30)
@@ -207,14 +207,16 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
                     else:                        
                         f.read(0x30)
                         print("#End of sub-meta", hex(f.tell()))
-                if unknown_meta == "weapon":
+                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod":
                     f.read(0x68)
-                elif unknown_meta == "base2":
-                    f.read(0x66)
                 else:
                     f.read(0x30)
+                    #print("#Possible error!")
+                    #sys.exit(0)
         else:
             f.read(0xCC)
+            #print("#Possible error!")
+            #sys.exit(0)
         print( "# unknown meta finished", hex(f.tell()))        
         
     f.read(4) # 0
