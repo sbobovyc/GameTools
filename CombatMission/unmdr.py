@@ -22,6 +22,7 @@ import struct
 import os
 import sys
 import argparse
+import numpy as np
 
 
 ########
@@ -77,7 +78,19 @@ class MDR_Object:
         string += "map_Kd %s.bmp\n" % self.texture_name
         return string
     
-        
+
+def read4x4Matrix(f):
+    matrix = np.zeros((4,4))
+    matrix[3][3] = 1            
+    for i in range(0, 4):
+        for j in range(0, 3):
+            value, = struct.unpack("f", f.read(4))
+            print( "#",hex(f.tell()),i,value)
+            matrix[i][j] = value
+    print(matrix)
+    print( "#End matrix", hex(f.tell()))
+
+
 def dump_model(base_name, f, model_number, outdir, dump = True):    
     print("# Start model ##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
@@ -159,17 +172,12 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length)
             print( "#Some matrix?", model_class)
-            for i in range(0, 0x30/4):
-                print( "#",hex(f.tell()),i,struct.unpack("f", f.read(4)))
-            print( "#End matrix", hex(f.tell()))
-
+            read4x4Matrix(f)                            
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length)
             print( "#Some matrix?", model_class)
-            for i in range(0, 0x30/4):
-                print( "#",i,struct.unpack("f", f.read(4)))
-            print( "#End matrix", hex(f.tell()))
-
+            read4x4Matrix(f)
+            
             print( "#Start some unknown")
             for i in range(0, 26):
                 print( "#",i,struct.unpack("f", f.read(4)))
@@ -181,7 +189,22 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print( "# unknown meta2", unknown_meta)
-        if unknown_meta == "weapon" or unknown_meta == "tripod" or unknown_meta == "base2" or unknown_meta == "base3": 
+        if unknown_meta == "weapon" or \
+           unknown_meta == "tripod" or \
+           unknown_meta == "base" or \
+           unknown_meta == "base2" or \
+           unknown_meta == "base3" or \
+           unknown_meta == "base3" or \
+           unknown_meta == "clip" or \
+           unknown_meta == "missile" or \
+           unknown_meta == "grenade" or \
+           unknown_meta == "day sight" or \
+           unknown_meta == "m203" or \
+           unknown_meta == "m320" or \
+           unknown_meta == "day" or \
+           unknown_meta == "cylinder01" or \
+           unknown_meta == "ammo" or \
+           unknown_meta == "bogus-weapon":
             print("Reading", unknown_meta)
             f.read(0x60)
             count, = struct.unpack("<I", f.read(4))
@@ -193,30 +216,28 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
                     length, = struct.unpack("<H", f.read(2))
                     unknown_meta2 = f.read(length)
                     print("Sub-meta", unknown_meta2)
-                    if unknown_meta2 == "eject":
-                        f.read(0x30)
-                        print("#End of sub-meta", hex(f.tell()))
-                    elif unknown_meta2 == "muzzle":
-                        f.read(0x30)
-                        print("#End of sub-meta", hex(f.tell()))
-                    elif unknown_meta2 == "link":
+                    if unknown_meta2 == "eject" or \
+                       unknown_meta2 == "link" or \
+                       unknown_meta2 == "muzzle":
                         f.read(0x30)
                         print("#End of sub-meta", hex(f.tell()))
                     elif length == 0:
                         print("#End of sub-meta", hex(f.tell()))
                     else:                        
                         f.read(0x30)
+                        print("#Possible error! Report about it on the forum.")
+                        sys.exit(0)                        
                         print("#End of sub-meta", hex(f.tell()))
                 if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod":
                     f.read(0x68)
                 else:
                     f.read(0x30)
-                    #print("#Possible error!")
-                    #sys.exit(0)
+                    print("#Possible error!")
+                    sys.exit(0)
         else:
             f.read(0xCC)
-            #print("#Possible error!")
-            #sys.exit(0)
+            print("#Possible error! Report about it on the forum.")
+            sys.exit(0)
         print( "# unknown meta finished", hex(f.tell()))        
         
     f.read(4) # 0
@@ -297,3 +318,4 @@ if __name__ == "__main__":
         print( "# number of models", num_models)
         for i in range(0, num_models):
             dump_model(base_name, f, i, args.outdir, not args.parse_only)
+
