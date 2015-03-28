@@ -91,7 +91,7 @@ def read4x4Matrix(f):
     print( "#End matrix", hex(f.tell()))
 
 
-def dump_model(base_name, f, model_number, outdir, dump = True):    
+def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     print("# Start model ##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
@@ -104,12 +104,15 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
     
     # object
     mdr_obj = None
+
+    # logging to ease reversing
+    logger = open("logger.txt", 'ab')
     
     if dump:
         obj_fout = open(os.path.join(outdir, "%s_%s.obj" % (base_name, submodel_name)), 'wb')
         mtl_fout = open(os.path.join(outdir, "%s_%s.mtl" % (base_name, submodel_name)), 'wb')
         mdr_obj = MDR_Object("%s_%s" % (base_name, submodel_name))
-    
+            
     f.read(1) # always 2?
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
@@ -159,18 +162,38 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
         print("# End unknown section", hex(f.tell()))
 
         print("# read 4 bytes, 0?", struct.unpack("<I", f.read(4))) # 0
+        #TODO object_type is probably really count for some metadata
         object_type, = struct.unpack("<I", f.read(4)) # can be 0,1 or 2    
         print( "# read 4 bytes, object type?: ", object_type)
 
-        if object_type == 1:
+        if object_type == 0:
+            print( "# Object type 1, reading some metadata of size 0x68")
+            #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
+            length, = struct.unpack("<H", f.read(2))
+            read4x4Matrix(f)         
+            length, = struct.unpack("<H", f.read(2))
+            read4x4Matrix(f)            
+            print("Unknown float", struct.unpack("f", f.read(4)))
+            print("# end object type 0", hex(f.tell()))    
+        elif object_type == 1:
+            # This type seems to occur only in the first model.
             print( "# Object type 1, reading some metadata")
             length, = struct.unpack("<H", f.read(2))
-            print( "# meta data name", f.read(length))
-            f.read(0x98)                
+            name = f.read(length) #TODO this is same as meta2 tags
+            print( "# meta data name", name)
+            #print("%s, type 1, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, name, hex(f.tell())), file=logger)
+            read4x4Matrix(f)         
+            length, = struct.unpack("<H", f.read(2))
+            read4x4Matrix(f)
+            length, = struct.unpack("<H", f.read(2))
+            read4x4Matrix(f)
+            print("Unknown float", struct.unpack("f", f.read(4)))
+            print("# end object type 1", hex(f.tell()))            
         elif object_type == 2:
             print( "# Object type 2")
             name_length, = struct.unpack("<H", f.read(2))
-            model_class = f.read(name_length)
+            model_class = f.read(name_length) #TODO this is same as meta2 tags
+            #print("%s, type 2, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, model_class, hex(f.tell())), file=logger)
             print( "#Some matrix?", model_class)
             read4x4Matrix(f)                            
             name_length, = struct.unpack("<H", f.read(2))
@@ -181,10 +204,17 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
             print( "#Start some unknown")
             for i in range(0, 26):
                 print( "#",i,struct.unpack("f", f.read(4)))
-            print( "#End unknown", hex(f.tell()))
-        elif object_type == 0:
-            print( "# Object type 1, reading some metadata of size 0x68")
-            f.read(0x68)        
+            print( "#End unknown", hex(f.tell()))        
+        elif object_type == 14:
+            print("# Is this a vehicle? Treat as error.")
+            for i in range(0, 14):
+                length, = struct.unpack("<H", f.read(2))
+                print(f.read(length))
+                read4x4Matrix(f)            
+            f.read(2) # length, size?
+            f.read(0x68)
+            print("#End unknown", hex(f.tell()))
+            sys.exit(0)
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
@@ -282,6 +312,7 @@ def dump_model(base_name, f, model_number, outdir, dump = True):
         print(mdr_obj.make_wavefront_obj(), file=obj_fout)
         print(mdr_obj.make_wavefront_mtl(), file=mtl_fout)
         obj_fout.close()
+    logger.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
@@ -317,5 +348,5 @@ if __name__ == "__main__":
         num_models, = struct.unpack("<Ix", f.read(5))
         print( "# number of models", num_models)
         for i in range(0, num_models):
-            dump_model(base_name, f, i, args.outdir, not args.parse_only)
+            dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only)
 
