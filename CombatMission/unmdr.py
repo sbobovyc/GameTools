@@ -219,22 +219,10 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print( "# unknown meta2", unknown_meta)
-        if unknown_meta == "weapon" or \
-           unknown_meta == "tripod" or \
-           unknown_meta == "base" or \
-           unknown_meta == "base2" or \
-           unknown_meta == "base3" or \
-           unknown_meta == "base3" or \
-           unknown_meta == "clip" or \
-           unknown_meta == "missile" or \
-           unknown_meta == "grenade" or \
-           unknown_meta == "day sight" or \
-           unknown_meta == "m203" or \
-           unknown_meta == "m320" or \
-           unknown_meta == "day" or \
-           unknown_meta == "cylinder01" or \
-           unknown_meta == "ammo" or \
-           unknown_meta == "bogus-weapon":
+        valid_weapon_meta_list = ["weapon", "tripod", "base", "base2", "base3", "clip", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
+        valid_building_meta_list = ["level 0", "roof", "wall-left-level 0", "wall-rear-level 0", "wall-front-level 0", "wall-right-level 0"]
+        valid_meta_list = valid_weapon_meta_list + valid_building_meta_list
+        if unknown_meta in valid_meta_list:
             print("Reading", unknown_meta)
             f.read(0x60)
             count, = struct.unpack("<I", f.read(4))
@@ -262,7 +250,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
                     f.read(0x68)
                 else:
                     f.read(0x30)
-                    print("#Possible error!")
+                    print("#Possible error! Report about it on the forum.")
                     sys.exit(0)
         else:
             f.read(0xCC)
@@ -299,7 +287,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     
     print( "#Start unknown")
     count, = struct.unpack("<I", f.read(4))
-    print( "# Unknown count", count)
+    print( "# Unknown count", count) # 3 per vertex
     for i in range(0, count):
         unk, = struct.unpack("<H", f.read(2))
         #print( "#",i, unk)
