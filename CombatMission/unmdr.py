@@ -23,7 +23,12 @@ import os
 import sys
 import argparse
 import json
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
 
 
 ########
@@ -90,7 +95,10 @@ class MDR_Object:
     
 
 def read4x4Matrix(f):
-    matrix = np.zeros((4,4))
+    if HAS_NUMPY:
+        matrix = np.zeros((4,4))
+    else:
+        matrix = [ 4*[0] for i in range(4) ]
     matrix[3][3] = 1            
     for i in range(0, 4):
         for j in range(0, 3):
