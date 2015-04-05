@@ -22,6 +22,7 @@ import struct
 import os
 import sys
 import argparse
+import json
 import numpy as np
 
 
@@ -55,13 +56,22 @@ class MDR_Object:
         string += "mtllib %s\n" % self.name
         string += "usemtl Diffuse\n"
 
+        use_Blender_order = True
         # write vertex info
-        for idx in self.index_array:
-            string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
-        for uv in self.uv_array:
-            string += "vt %s %s\n" % (uv[0], uv[1])            
-        for vert in self.vertex_array:
-            string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
+        if use_Blender_order:
+            for vert in self.vertex_array:
+                string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
+            for uv in self.uv_array:
+                string += "vt %s %s\n" % (uv[0], uv[1])                  
+            for idx in self.index_array:
+                string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)          
+        else:
+            for idx in self.index_array:
+                string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
+            for uv in self.uv_array:
+                string += "vt %s %s\n" % (uv[0], uv[1])            
+            for vert in self.vertex_array:
+                string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
 
         return string
 
@@ -124,7 +134,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     print("# Start face vertex indices")
     face_count, = struct.unpack("<I", f.read(4))
     print("# Face count:", face_count/3)
-
+    manifest = {u'model' : base_name, u'sub_model': submodel_name, u'vertex_index_offset' : f.tell()}    
+    
     for i in range(0, face_count/3):        
         if not dump:
             f.read(6)
@@ -138,8 +149,10 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     ###############################################
     print("# Start UVs")
     uv_in_section, = struct.unpack("<I", f.read(4))
-    print("# UV in section:", uv_in_section)
-        
+    print("# UV in section:", uv_in_section/2)
+
+    manifest[u'uv_offset'] = f.tell()    
+    
     for i in range(0, uv_in_section/2):
         if not dump:
             f.read(8)
@@ -275,6 +288,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     print( "#Start vertices")
     vertex_floats, = struct.unpack("<I", f.read(4))
     print( "#Vertices", vertex_floats/3)
+    manifest[u'vertex_offset'] = f.tell()
+    
     for i in range(0, vertex_floats/3):
         if not dump:
             f.read(12)
@@ -299,8 +314,9 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     if dump: 
         print(mdr_obj.make_wavefront_obj(), file=obj_fout)
         print(mdr_obj.make_wavefront_mtl(), file=mtl_fout)
-        obj_fout.close()
+        obj_fout.close()        
     logger.close()
+    return manifest
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
@@ -332,9 +348,15 @@ if __name__ == "__main__":
     
     print( "#",filepath)
     base_name = os.path.splitext(os.path.basename(filepath))[0]
+    model_manifests = []
     with open(filepath, "rb") as f:
         num_models, = struct.unpack("<Ix", f.read(5))
         print( "# number of models", num_models)
         for i in range(0, num_models):
-            dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only)
+            manifest = dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only)
+            model_manifests.append(manifest)
+            
+    if not args.parse_only:
+        with open("%s_manifest.json" % base_name, "wb") as f:
+            print(json.dumps([u'%s' % base_name, model_manifests], indent=4), file=f)
 
