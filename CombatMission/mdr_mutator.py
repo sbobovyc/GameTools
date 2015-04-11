@@ -33,26 +33,34 @@ class SimpleOBJ:
         self.uv_array = []
         self.vertex_array = []
 
-        pattern = re.compile('vt (\d+.\d+) (\d+.\d+)')
+        VIpattern = re.compile('f (\d+)/(\d+) (\d+)/(\d+) (\d+)/(\d+)')
+        VTpattern = re.compile('vt (\d+.\d+) (\d+.\d+)')        
+        Vpattern = re.compile('v ([-]?\d+.\d+) ([-]?\d+.\d+) ([-]?\d+.\d+)')        
         with open(path, "rb") as f:
             lines = f.readlines()
             for line in lines:
-                match = pattern.match(line)
+                match = VIpattern.match(line)
                 if match != None:
-                    self.uv_array.append([float(match.group(1)), float(match.group(2))])
-            
-            
-    
+                    self.index_array.append( [int(match.group(1))-1, int(match.group(3))-1, int(match.group(5))-1] )
+                match = VTpattern.match(line)
+                if match != None:
+                    self.uv_array.append( [float(match.group(1)), float(match.group(2))] )
+                match = Vpattern.match(line)
+                if match != None:
+                    self.vertex_array.append( [float(match.group(1)), float(match.group(2)), float(match.group(3))] )
+                
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for mutating mdr files.')
     parser.add_argument('file', nargs='?', help='Input file')
+    parser.add_argument('--scale', '-s', default=1.0, help='Scaling factor')
     args = parser.parse_args()
-    
+
+    print(args)
     if args.file == None:
         print("Error, supply a file as parameter")
         sys.exit()
-
+    
     with open(args.file, "rb") as f:
         obj = json.loads(f.read())
         name = obj[0]
@@ -62,8 +70,24 @@ if __name__ == "__main__":
             obj_name = "%s_%s.obj" % (sub_module[u'model'], sub_module[u'sub_model'])
             print(obj_name)
             obj = SimpleOBJ(obj_name)
+            sys.exit()
+            f_mdr.seek(sub_module[u'vertex_index_offset'])
+            print("Writing vert index at", hex(f_mdr.tell()))
+            for vi in obj.index_array:
+                new_vi = struct.pack("<HHH", *vi)
+                f_mdr.write(new_vi)
+            print("End vert index at", hex(f_mdr.tell()))
+
             f_mdr.seek(sub_module[u'uv_offset'])
-            print(f_mdr.tell())
+            print("Writing uv at", hex(f_mdr.tell()))
             for uv in obj.uv_array:
                 new_uv = struct.pack("ff", *uv)
                 f_mdr.write(new_uv)
+            print("End uv at", hex(f_mdr.tell()))
+
+            f_mdr.seek(sub_module[u'vertex_offset'])
+            print("Writing verts at", hex(f_mdr.tell()))
+            for vert in obj.vertex_array:
+                new_vertex = struct.pack("fff", scale*vert[0], scale*vert[1], scale*vert[2])
+                f_mdr.write(new_vertex)
+            print("End vert at", hex(f_mdr.tell()))

@@ -30,6 +30,8 @@ except ImportError:
     HAS_NUMPY = False
 
 
+def float2string(f):
+    return "{0:.12f}".format(f)
 
 ########
 # object:
@@ -65,7 +67,7 @@ class MDR_Object:
         # write vertex info
         if use_Blender_order:
             for vert in self.vertex_array:
-                string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
+                string += "v %s %s %s\n" % ( float2string(vert[0]), float2string(vert[1]), float2string(vert[2]))
             for uv in self.uv_array:
                 string += "vt %s %s\n" % (uv[0], uv[1])                  
             for idx in self.index_array:
@@ -76,7 +78,7 @@ class MDR_Object:
             for uv in self.uv_array:
                 string += "vt %s %s\n" % (uv[0], uv[1])            
             for vert in self.vertex_array:
-                string += "v %s %s %s\n" % (vert[0], vert[1], vert[2])
+                string += "v %s %s %s\n" % ( float2string(vert[0]), float2string(vert[1]), float2string(vert[2]))
 
         return string
 
