@@ -6,7 +6,7 @@ More details.
 """
 
 """
-Copyright (C) 2014 Stanislav Bobovych
+Copyright (C) 2015 Stanislav Bobovych
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -55,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument('file', nargs='?', help='Input file')
     parser.add_argument('--scale', '-s', default=1.0, help='Scaling factor')
     args = parser.parse_args()
+    scale = float(args.scale)
 
     print(args)
     if args.file == None:
@@ -70,7 +71,7 @@ if __name__ == "__main__":
             obj_name = "%s_%s.obj" % (sub_module[u'model'], sub_module[u'sub_model'])
             print(obj_name)
             obj = SimpleOBJ(obj_name)
-            sys.exit()
+            
             f_mdr.seek(sub_module[u'vertex_index_offset'])
             print("Writing vert index at", hex(f_mdr.tell()))
             for vi in obj.index_array:
