@@ -23,12 +23,7 @@ import os
 import sys
 import argparse
 import json
-try:
-    import numpy as np
-    HAS_NUMPY = True
-except ImportError:
-    HAS_NUMPY = False
-
+from pprint import pprint
 
 def float2string(f):
     return "{0:.12f}".format(f)
@@ -97,17 +92,13 @@ class MDR_Object:
     
 
 def read4x4Matrix(f):
-    if HAS_NUMPY:
-        matrix = np.zeros((4,4))
-    else:
-        matrix = [ 4*[0] for i in range(4) ]
-    matrix[3][3] = 1            
+    matrix = [ 4*[0] for i in range(4) ]
     for i in range(0, 4):
         for j in range(0, 3):
             value, = struct.unpack("f", f.read(4))
             print( "#",hex(f.tell()),i,value)
             matrix[i][j] = value
-    print(matrix)
+    pprint(matrix)
     print( "#End matrix", hex(f.tell()))
 
 
@@ -190,7 +181,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         print( "# read 4 bytes, object type?: ", object_type)
 
         if object_type == 0:
-            print( "# Object type 1, reading some metadata of size 0x68")
+            print( "# Object type 0, reading some metadata of size 0x68")
             #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
             length, = struct.unpack("<H", f.read(2))
             read4x4Matrix(f)         
