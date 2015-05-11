@@ -92,3 +92,11 @@ if __name__ == "__main__":
                 new_vertex = struct.pack("fff", scale*vert[0], scale*vert[1], scale*vert[2])
                 f_mdr.write(new_vertex)
             print("End vert at", hex(f_mdr.tell()))
+
+            if u'type0' in sub_module.keys():
+                for mat in sub_module[u'type0']:
+                    f_mdr.seek(mat[0][u'offset'])
+                    for row in mat[1]:
+                        packed_row = struct.pack("fff", *row[:-1])
+                        f_mdr.write(packed_row)
+                    

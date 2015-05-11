@@ -93,6 +93,7 @@ class MDR_Object:
 
 def read4x4Matrix(f):
     matrix = [ 4*[0] for i in range(4) ]
+    matrix[3][3] = 1
     for i in range(0, 4):
         for j in range(0, 3):
             value, = struct.unpack("f", f.read(4))
@@ -100,6 +101,7 @@ def read4x4Matrix(f):
             matrix[i][j] = value
     pprint(matrix)
     print( "#End matrix", hex(f.tell()))
+    return matrix
 
 
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
@@ -183,10 +185,16 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         if object_type == 0:
             print( "# Object type 0, reading some metadata of size 0x68")
             #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
+            manifest[u'type0'] = []
             length, = struct.unpack("<H", f.read(2))
-            read4x4Matrix(f)         
+            matrix0_offset = f.tell()
+            matrix0 = read4x4Matrix(f)    
+            manifest[u'type0'].append( ( {u'offset': matrix0_offset}, matrix0) )
             length, = struct.unpack("<H", f.read(2))
-            read4x4Matrix(f)            
+            matrix1_offset = f.tell()
+            matrix1 = read4x4Matrix(f)            
+            manifest[u'type0'].append( ( {u'offset': matrix1_offset}, matrix1) )
+            # Second row and third row of matrix1 affect ambient color
             print("Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 0", hex(f.tell()))    
         elif object_type == 1:
