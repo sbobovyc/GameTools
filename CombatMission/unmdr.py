@@ -91,17 +91,16 @@ class MDR_Object:
         return string
     
 
-def read4x4Matrix(f):
-    matrix = [ 4*[0] for i in range(4) ]
-    matrix[3][3] = 1
+def readMetaData(f):
+    meta = [ 3*[0] for i in range(4) ]
     for i in range(0, 4):
         for j in range(0, 3):
             value, = struct.unpack("f", f.read(4))
             print( "#",hex(f.tell()),i,value)
-            matrix[i][j] = value
-    pprint(matrix)
-    print( "#End matrix", hex(f.tell()))
-    return matrix
+            meta[i][j] = value
+    pprint(meta)
+    print( "#End metadata", hex(f.tell()))
+    return meta
 
 
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
@@ -187,14 +186,16 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
             manifest[u'type0'] = []
             length, = struct.unpack("<H", f.read(2))
-            matrix0_offset = f.tell()
-            matrix0 = read4x4Matrix(f)    
-            manifest[u'type0'].append( ( {u'offset': matrix0_offset}, matrix0) )
+            meta0_offset = f.tell()
+            # first set of meta data is some kind of text, probably random garbage
+            print("# random garbage? ", f.read(48))
+            #meta0 = readMetaData(f)    
+            #manifest[u'type0'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
-            matrix1_offset = f.tell()
-            matrix1 = read4x4Matrix(f)            
-            manifest[u'type0'].append( ( {u'offset': matrix1_offset}, matrix1) )
-            # Second row and third row of matrix1 affect ambient color
+            meta1_offset = f.tell()
+            # Second row and third row of meta1 affect ambient color
+            meta1 = readMetaData(f)            
+            manifest[u'type0'].append( ( {u'offset': meta1_offset}, meta1) )
             print("Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 0", hex(f.tell()))    
         elif object_type == 1:
@@ -204,11 +205,18 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             name = f.read(length) #TODO this is same as meta2 tags
             print( "# meta data name", name)
             #print("%s, type 1, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, name, hex(f.tell())), file=logger)
-            read4x4Matrix(f)         
+            manifest[u'type1'] = []
+            meta0_offset = f.tell()
+            meta0 = readMetaData(f)         
+            manifest[u'type1'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
-            read4x4Matrix(f)
+            meta1_offset = f.tell()
+            meta1 = readMetaData(f)
+            manifest[u'type1'].append( ( {u'offset': meta1_offset}, meta1) )
             length, = struct.unpack("<H", f.read(2))
-            read4x4Matrix(f)
+            meta2_offset = f.tell()
+            meta2 = readMetaData(f)
+            manifest[u'type1'].append( ( {u'offset': meta2_offset}, meta2) )
             print("Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 1", hex(f.tell()))            
         elif object_type == 2:
@@ -216,12 +224,17 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length) #TODO this is same as meta2 tags
             #print("%s, type 2, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, model_class, hex(f.tell())), file=logger)
-            print( "#Some matrix?", model_class)
-            read4x4Matrix(f)                            
+            print( "#Some meta?", model_class)
+            manifest[u'type2'] = []
+            meta0_offset = f.tell()
+            meta0 = readMetaData(f)                            
+            manifest[u'type2'].append( ( {u'offset': meta0_offset}, meta0) )
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length)
-            print( "#Some matrix?", model_class)
-            read4x4Matrix(f)
+            print( "#Some meta?", model_class)
+            meta1_offset = f.tell()
+            meta1 = readMetaData(f)
+            manifest[u'type2'].append( ( {u'offset': meta1_offset}, meta1) )
             
             print( "#Start some unknown")
             for i in range(0, 26):
@@ -232,7 +245,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             for i in range(0, 14):
                 length, = struct.unpack("<H", f.read(2))
                 print(f.read(length))
-                read4x4Matrix(f)            
+                readMetaData(f)            
             f.read(2) # length, size?
             f.read(0x68)
             print("#End unknown", hex(f.tell()))
