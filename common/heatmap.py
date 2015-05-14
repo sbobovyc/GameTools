@@ -52,7 +52,7 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     mp = args.colormap
     t1 = time.time()
-    ax.pcolor(new_data, cmap=mp)
+    ax.pcolormesh(new_data, cmap=mp)
     t2 = time.time()
     print "Time to plot: ",  t2-t1
     
