@@ -65,7 +65,7 @@ class MemScanHook(BpHook):
             imm.log("In MemScanHook, Address: %08x - Stack: %08x - Procedure: %s - frame: %08x - called from: %08x" %( a.address,a.stack,a.procedure,a.frame,a.calledfrom))
             
             for address in imm.searchOnWrite(self.buf):
-                imm.log("Found 0x%08x" % address)
+                imm.log("Found patter at address: 0x%08x" % address)
                 imm.cleanHooks()
                 module = imm.getModule(imm.getDebuggedName())
                 base = module.getBase()
@@ -80,20 +80,16 @@ def main(args):
     module = imm.getModule(imm.getDebuggedName())
     imm.log("module %s at 0x%08X" % (module, module.getBase()))
     buf = "6D 65 64 75 6E 61 5F 61 69 72 70 6F 72 74 00 BA 0E 00 00 00 0F 00 00 00 00 00 00 00 27 00 00 00".replace( ' ', '' ).decode("hex")
-    #TODO recalculate as offsets from base
-    blacklisted_addresses = [0x0040F3F0, 0x00513C60, 0x006B7ED9,
-                             0x006B7822, 0x006B93D6, 0x0041B170,
-                             0x005D19B0, 0x0041B171] 
+    knowledge = imm.listKnowledge()
 
     # set breakpoint on place where save game is loaded
     imm.setBreakpoint(0x40BF80)
     # make sure module is analysed
     if not module.isAnalysed():
         module.Analyse()
-    #for f in imm.getAllFunctions(module.getBase()):
-    for f in [0x00593F90]:
-        if not f in blacklisted_addresses:
-            for ret in imm.getFunctionEnd(f):                
+    for f in imm.getAllFunctions(module.getBase()):        
+        for ret in imm.getFunctionEnd(f):
+            if "0x%08X" % ret not in knowledge:
                 imm.log("function 0x%08X ret at 0x%08X" % (f, ret))
                 h = MemScanHook(buf)
                 h.add("memscan 0x%08X"%f, ret)
