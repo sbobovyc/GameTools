@@ -8,14 +8,15 @@ SUPPORTED_ENTRY = ["SKIN", "MESH", "VERT", "INDX"]
 SUPPORTED_FORMAT = [0x0644, 0x0604, 0x0404, 0x0704, 0x0744, 0x0C14]
 
 class PLY:
-    def __init__(self, path):
+    def __init__(self, path, translate_uv_y=False):
         self.path = path
+        self.translate_uv_y = translate_uv_y
         self.indeces = []
         self.positions = []
         self.normals = []
         self.UVs = []
         self.open(self.path)
-        self.material_info = 0x0000
+        self.material_info = 0x0000        
         
     def open(self, peek=False, verbose=False):
         with open(self.path, "rb") as f:
@@ -81,7 +82,10 @@ class PLY:
                             print("Vertex %i: " % i,vx,vy,vz)
                         self.positions.append((vx,vy,vz))
                         self.normals.append((nx,ny,nz))
-                        self.UVs.append((U,V))
+                        if not self.translate_uv_y:
+                            self.UVs.append((U,V))
+                        else:
+                            self.UVs.append((U,V+1.0))
                     print("Vertex info ends at:",hex(f.tell()))
                 if entry == SUPPORTED_ENTRY[3]: #INDX
                     idx_count, = struct.unpack("<I", f.read(4))
