@@ -23,7 +23,7 @@ cmaps = [('Sequential',     ['Blues', 'BuGn', 'BuPu',
                              'gist_rainbow', 'hsv', 'flag', 'prism'])]
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Tool that can unpack/pack Combat Mission brz files.', epilog='Color maps %s' % pformat(cmaps))
+    parser = argparse.ArgumentParser(description='Tool that can plot any file as a heat map.', epilog='Color maps %s' % pformat(cmaps))
     parser.add_argument('filepath', nargs='?', help='File to analyze')
     parser.add_argument('--colormap', default='hot', help='Matplotlib color map')
     args = parser.parse_args()
