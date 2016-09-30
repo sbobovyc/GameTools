@@ -104,7 +104,7 @@ def readMetaData(f):
 
 
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
-    print("# Start model ##############################################################"    )
+    print("# Start model ", hex(f.tell()), "##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
     submodel_name = f.read(name_length)
@@ -178,7 +178,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
 
         print("# read 4 bytes, 0?", struct.unpack("<I", f.read(4))) # 0
         #TODO object_type is probably really count for some metadata
-        object_type, = struct.unpack("<I", f.read(4)) # can be 0,1 or 2    
+        object_type, = struct.unpack("<I", f.read(4)) # can be 0,1, 2, 14, 19
         print( "# read 4 bytes, object type?: ", object_type)
 
         if object_type == 0:
@@ -246,17 +246,25 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
                 length, = struct.unpack("<H", f.read(2))
                 print(f.read(length))
                 readMetaData(f)            
-            f.read(2) # length, size?
             f.read(0x68)
             print("#End unknown", hex(f.tell()))
-            sys.exit(0)
+        elif object_type == 19:
+            print("# Is this a vehicle? Treat as error.")
+            for i in range(0, 19):                
+                length, = struct.unpack("<H", f.read(2))
+                print(f.read(length))
+                print(i)
+                readMetaData(f)            
+            f.read(0x68)
+            print("#End unknown", hex(f.tell()))              
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print( "# unknown meta2", unknown_meta)
         valid_weapon_meta_list = ["weapon", "tripod", "base", "base2", "base3", "clip", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
         valid_building_meta_list = ["level 0", "roof", "wall-left-level 0", "wall-rear-level 0", "wall-front-level 0", "wall-right-level 0"]
-        valid_meta_list = valid_weapon_meta_list + valid_building_meta_list
+        valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "hatch2", "hatch3", "hatch4", "mount", "muzzle", "turret", "wheel", "wheel2", "wheel3", "wheel4", "wheel5", "wheel6", "wheel7", "wheel8"]
+        valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
         if unknown_meta in valid_meta_list:
             print("Reading", unknown_meta)
             f.read(0x60)
@@ -265,13 +273,15 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             if count == 0:
                 f.read(0x68)
             else:
-                for i in range(0, count):
+                for i in range(0, count):                    
                     length, = struct.unpack("<H", f.read(2))
                     unknown_meta2 = f.read(length)
                     print("Sub-meta", unknown_meta2)
                     if unknown_meta2 == "eject" or \
                        unknown_meta2 == "link" or \
-                       unknown_meta2 == "muzzle":
+                       unknown_meta2 == "muzzle" or \
+                       unknown_meta2 == "weapon muzzle" or\
+                       unknown_meta2 == "weapon2 muzzle":
                         f.read(0x30)
                         print("#End of sub-meta", hex(f.tell()))
                     elif length == 0:
@@ -279,13 +289,12 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
                     else:                        
                         f.read(0x30)
                         print("#Possible error! Report about it on the forum.")
-                        sys.exit(0)                        
-                        print("#End of sub-meta", hex(f.tell()))
-                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod":
+                        print("#End of sub-meta", hex(f.tell()))                        
+                        sys.exit(0)                                                
+                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod" or unknown_meta == "mount":
                     f.read(0x68)
-                else:
-                    f.read(0x30)
-                    print("#Possible error! Report about it on the forum.")
+                else:                    
+                    print("#Possible error! Report about it on the forum.")                    
                     sys.exit(0)
         else:
             f.read(0xCC)
@@ -296,7 +305,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
     texture_name = f.read(name_length)
-    print( "#Texture name", texture_name)
+    print( "#Texture name", texture_name)    
     if dump:
         mdr_obj.texture_name = texture_name
 
