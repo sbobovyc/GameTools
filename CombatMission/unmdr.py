@@ -99,6 +99,13 @@ def readMetaData(f):
             print( "#",hex(f.tell()),i,value)
             meta[i][j] = value
     pprint(meta)
+    transform_matrix = [ 4*[0] for i in range(4)]
+    for i in range(0, 4):
+        for j in range(0, 3):
+            transform_matrix[j][i] = meta[i][j]
+    transform_matrix[3][3] = 1.0
+    print("# This is mostly likely a transform matrix:")
+    pprint(transform_matrix)
     print( "#End metadata", hex(f.tell()))
     return meta
 
