@@ -201,7 +201,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             length, = struct.unpack("<H", f.read(2))
             meta0_offset = f.tell()
             # first set of meta data is some kind of text, probably random garbage
-            print("# random garbage? ", f.read(48))
+            print("# random garbage? ", "0x%x" % f.tell())
+            unk = f.read(48)
             #meta0 = readMatrix(f)    
             #manifest[u'type0'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
