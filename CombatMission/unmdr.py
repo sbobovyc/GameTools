@@ -91,12 +91,12 @@ class MDR_Object:
         return string
     
 
-def readMetaData(f):
+def readMatrix(f):
     meta = [ 3*[0] for i in range(4) ]
     for i in range(0, 4):
         for j in range(0, 3):
             value, = struct.unpack("f", f.read(4))
-            print( "#",hex(f.tell()),i,value)
+            print( "#","0x%x" % f.tell(),i,value)
             meta[i][j] = value
     pprint(meta)
     transform_matrix = [ 4*[0] for i in range(4)]
@@ -106,12 +106,12 @@ def readMetaData(f):
     transform_matrix[3][3] = 1.0
     print("# This is mostly likely a transform matrix:")
     pprint(transform_matrix)
-    print( "#End metadata", hex(f.tell()))
+    print( "#End metadata", "0x%x" % f.tell())
     return meta
 
 
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
-    print("# Start model ", hex(f.tell()), "##############################################################"    )
+    print("# Start model ", "0x%x" % f.tell(), "##############################################################"    )
     name_length, = struct.unpack("<H", f.read(2))
     #print "name length", name_length
     submodel_name = f.read(name_length)
@@ -133,10 +133,11 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         mdr_obj = MDR_Object("%s_%s" % (base_name, submodel_name))
             
     f.read(1) # always 2?
+    print("# Start unknown section", "0x%x" % f.tell())    
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
-        #print "#",i, unk
-    print("# Finished unknown section", hex(f.tell()))
+        print("#",i, unk)
+    print("# Finished unknown section", "0x%x" % f.tell())
 
 
     ###############################################    
@@ -152,7 +153,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             v0, v1, v2 = struct.unpack("<HHH", f.read(6))
             #print("f %i/%i %i/%i %i/%i" % (v0+1,v0+1,v1+1,v1+1,v2+1,v2+1))
             mdr_obj.index_array.append((v0,v1,v2))
-    print("# Finished face vertex indices", hex(f.tell()))
+    print("# Finished face vertex indices", "0x%x" % f.tell())
     ###############################################
 
     ###############################################
@@ -169,7 +170,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             u,v = struct.unpack("<ff", f.read(8))        
             #print("vt", u,v)
             mdr_obj.uv_array.append((u,v))                    
-    print("# Finish UV section:", hex(f.tell()))
+    print("# Finish UV section:", "0x%x" % f.tell())
     ###############################################    
 
     print("# Start unknown section 1"   )
@@ -181,7 +182,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         for i in range(0, 0x30/4):
             print("#",i,struct.unpack("ff", f.read(8)))
         
-        print("# End unknown section", hex(f.tell()))
+        print("# End unknown section", "0x%x" % f.tell())
 
         print("# read 4 bytes, 0?", struct.unpack("<I", f.read(4))) # 0
         #TODO object_type is probably really count for some metadata
@@ -196,15 +197,15 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             meta0_offset = f.tell()
             # first set of meta data is some kind of text, probably random garbage
             print("# random garbage? ", f.read(48))
-            #meta0 = readMetaData(f)    
+            #meta0 = readMatrix(f)    
             #manifest[u'type0'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
             # Second row and third row of meta1 affect ambient color
-            meta1 = readMetaData(f)            
+            meta1 = readMatrix(f)            
             manifest[u'type0'].append( ( {u'offset': meta1_offset}, meta1) )
             print("Unknown float", struct.unpack("f", f.read(4)))
-            print("# end object type 0", hex(f.tell()))    
+            print("# end object type 0", "0x%x" % f.tell())
         elif object_type == 1:
             # This type seems to occur only in the first model.
             print( "# Object type 1, reading some metadata")
@@ -214,18 +215,18 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             #print("%s, type 1, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, name, hex(f.tell())), file=logger)
             manifest[u'type1'] = []
             meta0_offset = f.tell()
-            meta0 = readMetaData(f)         
+            meta0 = readMatrix(f)         
             manifest[u'type1'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
-            meta1 = readMetaData(f)
+            meta1 = readMatrix(f)
             manifest[u'type1'].append( ( {u'offset': meta1_offset}, meta1) )
             length, = struct.unpack("<H", f.read(2))
             meta2_offset = f.tell()
-            meta2 = readMetaData(f)
+            meta2 = readMatrix(f)
             manifest[u'type1'].append( ( {u'offset': meta2_offset}, meta2) )
             print("Unknown float", struct.unpack("f", f.read(4)))
-            print("# end object type 1", hex(f.tell()))            
+            print("# end object type 1","0x%x" % f.tell())
         elif object_type == 2:
             print( "# Object type 2")
             name_length, = struct.unpack("<H", f.read(2))
@@ -234,27 +235,27 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             print( "#Some meta?", model_class)
             manifest[u'type2'] = []
             meta0_offset = f.tell()
-            meta0 = readMetaData(f)                            
+            meta0 = readMatrix(f)                            
             manifest[u'type2'].append( ( {u'offset': meta0_offset}, meta0) )
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length)
             print( "#Some meta?", model_class)
             meta1_offset = f.tell()
-            meta1 = readMetaData(f)
+            meta1 = readMatrix(f)
             manifest[u'type2'].append( ( {u'offset': meta1_offset}, meta1) )
             
             print( "#Start some unknown")
             for i in range(0, 26):
                 print( "#",i,struct.unpack("f", f.read(4)))
-            print( "#End unknown", hex(f.tell()))        
+            print( "#End unknown", "0x%x" % f.tell())
         elif object_type >= 14:
             print("# Is this a vehicle? Treat as error.")
             for i in range(0, object_type):
                 length, = struct.unpack("<H", f.read(2))
                 print(f.read(length))
-                readMetaData(f)            
+                readMatrix(f)            
             f.read(0x68)
-            print("#End unknown", hex(f.tell()))         
+            print("#End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
@@ -279,14 +280,14 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
                     valid_sub_meta = ["eject", "gunner", "link", "muzzle", "firespot", "weapon eject", "weapon muzzle", "weapon2 muzzle"]
                     print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                     if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
-                        readMetaData(f)
-                        print("#End of sub-meta", hex(f.tell()))
+                        readMatrix(f)
+                        print("#End of sub-meta", "0x%x" % f.tell())
                     elif length == 0:
-                        print("#End of sub-meta", hex(f.tell()))
+                        print("#End of sub-meta", "0x%x" % f.tell())
                     else:                        
-                        readMetaData(f)
+                        readMatrix(f)
                         print("#Possible error! Report about it on the forum.")
-                        print("#End of sub-meta", hex(f.tell()))                        
+                        print("#End of sub-meta", "0x%x" % f.tell())
                         sys.exit(0)                                                
                 if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod" or unknown_meta == "mount" or unknown_meta == "hull":
                     f.read(0x68)
@@ -297,7 +298,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             f.read(0xCC)
             print("#Possible error! Report about it on the forum.")
             sys.exit(0)
-        print( "# unknown meta finished", hex(f.tell()))        
+        print( "# unknown meta finished", "0x%x" % f.tell())
         
     f.read(4) # 0
     name_length, = struct.unpack("<H", f.read(2))
@@ -310,7 +311,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
         #print( unk)
-    print( "#Finished unknown section", hex(f.tell()))
+    print( "#Finished unknown section", "0x%x" % f.tell())
 
     ###############################################
     print( "#Start vertices")
@@ -325,7 +326,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             x,y,z = struct.unpack("fff", f.read(12))
             #print( "v",x,y,z)
             mdr_obj.vertex_array.append((x,y,z))
-    print( "#End vertices", hex(f.tell()))
+    print( "#End vertices", "0x%x" % f.tell())
     ###############################################
     
     print( "#Start unknown")
@@ -334,7 +335,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
     for i in range(0, count):
         unk, = struct.unpack("<H", f.read(2))
         #print( "#",i, unk)
-    print( "#End unknown", hex(f.tell()))
+    print( "#End unknown", "0x%x" % f.tell())
     print( "# End model ##############################################################")
     f.read(4) # 0
     f.read(1)
