@@ -91,12 +91,13 @@ class MDR_Object:
         return string
     
 
-def readMatrix(f):
-    meta = [ 3*[0] for i in range(4) ]
+def read_matrix(f):
+    print("# Start reading metadata", "0x%x" % f.tell())
+    meta = [3*[0] for i in range(4)]
     for i in range(0, 4):
         for j in range(0, 3):
             value, = struct.unpack("f", f.read(4))
-            print( "#","0x%x" % f.tell(),i,value)
+            print("# 0x%x [%i] %f" % (f.tell()-4, i, value))
             meta[i][j] = value
     pprint(meta)
     transform_matrix = [ 4*[0] for i in range(4)]
@@ -104,16 +105,16 @@ def readMatrix(f):
         for j in range(0, 3):
             transform_matrix[j][i] = meta[i][j]
     transform_matrix[3][3] = 1.0
-    print("# This is mostly likely a transform matrix:")
+    print("# This is mostly likely this transform matrix:")
     pprint(transform_matrix)
-    print( "#End metadata", "0x%x" % f.tell())
+    print("# End metadata", "0x%x" % f.tell())
     return meta
 
 
-def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
-    print("# Start model ", "0x%x" % f.tell(), "##############################################################"    )
+def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verbose=False):
+    print("# Start model", "0x%x" % f.tell(), "##############################################################")
     name_length, = struct.unpack("<H", f.read(2))
-    #print "name length", name_length
+    print("# submodel name length", name_length)
     submodel_name = f.read(name_length)
     print("# submodel name", submodel_name)
 
@@ -131,16 +132,18 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
         obj_fout = open(os.path.join(outdir, "%s_%s.obj" % (base_name, submodel_name)), 'wb')
         mtl_fout = open(os.path.join(outdir, "%s_%s.mtl" % (base_name, submodel_name)), 'wb')
         mdr_obj = MDR_Object("%s_%s" % (base_name, submodel_name))
-            
-    f.read(1) # always 2?
+
+    unk, = struct.unpack("b", f.read(1))
+    print("# Read unknown byte (always 2?):", unk)
     print("# Start unknown section", "0x%x" % f.tell())    
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
-        print("#",i, unk)
+        if verbose:
+            print("# [%i] %f" % (i, unk))
     print("# Finished unknown section", "0x%x" % f.tell())
 
 
-    ###############################################    
+    ###############################################
     print("# Start face vertex indices")
     face_count, = struct.unpack("<I", f.read(4))
     print("# Face count:", face_count/3)
@@ -171,23 +174,25 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             #print("vt", u,v)
             mdr_obj.uv_array.append((u,v))                    
     print("# Finish UV section:", "0x%x" % f.tell())
-    ###############################################    
+    ###############################################
 
-    print("# Start unknown section 1"   )
+    print("# Start unknown section 1")
     unk, = struct.unpack("<I", f.read(4))
-    print("# Unknown",unk)
+    print("# Unknown", "0x%x" % unk)
 
     if model_number == 0:
-        print("#Some matrix?")
+        print("# Some matrix?")
         for i in range(0, 0x30/4):
-            print("#",i,struct.unpack("ff", f.read(8)))
+            unk1,unk2 = struct.unpack("ff", f.read(8))
+            if verbose:
+                print("# [%i] %f, %f" % (i, unk1, unk2))
         
         print("# End unknown section", "0x%x" % f.tell())
-
-        print("# read 4 bytes, 0?", struct.unpack("<I", f.read(4))) # 0
+        unk, = struct.unpack("<I", f.read(4))
+        print("# Read 4 bytes (always 0?)", unk)
         #TODO object_type is probably really count for some metadata
-        object_type, = struct.unpack("<I", f.read(4)) # can be 0,1, 2, 14, 19
-        print( "# read 4 bytes, object type?: ", object_type)
+        object_type, = struct.unpack("<I", f.read(4))
+        print("# Read 4 bytes, object type?: ", object_type)
 
         if object_type == 0: #TODO not object type, but count of meta data?
             print( "# Object type 0, reading some metadata of size 0x68")
@@ -202,71 +207,70 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
             # Second row and third row of meta1 affect ambient color
-            meta1 = readMatrix(f)            
+            meta1 = read_matrix(f)
             manifest[u'type0'].append( ( {u'offset': meta1_offset}, meta1) )
-            print("Unknown float", struct.unpack("f", f.read(4)))
+            print("# Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 0", "0x%x" % f.tell())
         elif object_type == 1:
             # This type seems to occur only in the first model.
-            print( "# Object type 1, reading some metadata")
+            print("# Object type 1, reading some metadata")
             length, = struct.unpack("<H", f.read(2))
             name = f.read(length) #TODO this is same as meta2 tags
-            print( "# meta data name", name)
+            print("# Meta data name", name)
             #print("%s, type 1, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, name, hex(f.tell())), file=logger)
             manifest[u'type1'] = []
             meta0_offset = f.tell()
-            meta0 = readMatrix(f)         
+            meta0 = read_matrix(f)
             manifest[u'type1'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
-            meta1 = readMatrix(f)
+            meta1 = read_matrix(f)
             manifest[u'type1'].append( ( {u'offset': meta1_offset}, meta1) )
             length, = struct.unpack("<H", f.read(2))
             meta2_offset = f.tell()
-            meta2 = readMatrix(f)
+            meta2 = read_matrix(f)
             manifest[u'type1'].append( ( {u'offset': meta2_offset}, meta2) )
-            print("Unknown float", struct.unpack("f", f.read(4)))
-            print("# end object type 1","0x%x" % f.tell())
+            print("# Unknown float", struct.unpack("f", f.read(4)))
+            print("# End object type 1","0x%x" % f.tell())
         elif object_type == 2:
-            print( "# Object type 2")
+            print("# Object type 2")
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length) #TODO this is same as meta2 tags
             #print("%s, type 2, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, model_class, hex(f.tell())), file=logger)
-            print( "#Some meta?", model_class)
+            print("#Some meta?", model_class)
             manifest[u'type2'] = []
             meta0_offset = f.tell()
-            meta0 = readMatrix(f)                            
+            meta0 = read_matrix(f)
             manifest[u'type2'].append( ( {u'offset': meta0_offset}, meta0) )
             name_length, = struct.unpack("<H", f.read(2))
             model_class = f.read(name_length)
-            print( "#Some meta?", model_class)
+            print("# Some meta?", model_class)
             meta1_offset = f.tell()
-            meta1 = readMatrix(f)
+            meta1 = read_matrix(f)
             manifest[u'type2'].append( ( {u'offset': meta1_offset}, meta1) )
             
-            print( "#Start some unknown")
+            print("# Start some unknown")
             for i in range(0, 26):
-                print( "#",i,struct.unpack("f", f.read(4)))
-            print( "#End unknown", "0x%x" % f.tell())
+                print("#",i,struct.unpack("f", f.read(4)))
+            print("#End unknown", "0x%x" % f.tell())
         elif object_type >= 14:
-            print("# Is this a vehicle? Treat as error.")
             for i in range(0, object_type):
                 length, = struct.unpack("<H", f.read(2))
                 print(f.read(length))
-                readMatrix(f)            
+                read_matrix(f)
             f.read(0x68)
-            print("#End unknown", "0x%x" % f.tell())
+            print("# End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
-        print( "# unknown meta2", unknown_meta)
+        print("# unknown meta2", unknown_meta)
         valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
         valid_building_meta_list = ["level 0", "roof", "wall-left-level 0", "wall-rear-level 0", "wall-front-level 0", "wall-right-level 0"]
         valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "mount", "muzzle", "turret", "wheel"]
         valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
         
         if True in map(lambda x: unknown_meta.startswith(x), valid_meta_list):
-            print("Reading", unknown_meta)
+            print("# Reading", unknown_meta)
             f.read(0x60)
             count, = struct.unpack("<I", f.read(4))
             print("# Count", count)
@@ -280,43 +284,49 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
                     valid_sub_meta = ["eject", "gunner", "link", "muzzle", "firespot", "weapon eject", "weapon muzzle", "weapon2 muzzle"]
                     print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                     if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
-                        readMatrix(f)
+                        read_matrix(f)
                         print("#End of sub-meta", "0x%x" % f.tell())
                     elif length == 0:
                         print("#End of sub-meta", "0x%x" % f.tell())
                     else:                        
-                        readMatrix(f)
+                        read_matrix(f)
                         print("#Possible error! Report about it on the forum.")
                         print("#End of sub-meta", "0x%x" % f.tell())
                         sys.exit(0)                                                
                 if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod" or unknown_meta == "mount" or unknown_meta == "hull":
                     f.read(0x68)
                 else:
-                    print("#Possible error! (%s) Report about it on the forum." % unknown_meta)                    
+                    print("# Possible error! (%s) Report about it on the forum." % unknown_meta)
                     sys.exit(0)
         else:
             f.read(0xCC)
             print("#Possible error! Report about it on the forum.")
             sys.exit(0)
-        print( "# unknown meta finished", "0x%x" % f.tell())
-        
-    f.read(4) # 0
+        print("# Unknown meta finished", "0x%x" % f.tell())
+
+    unk, = struct.unpack("<I", f.read(4))
+    print("# Read 4 bytes (always 0?)", unk)
+
     name_length, = struct.unpack("<H", f.read(2))
     texture_name = f.read(name_length)
-    print( "#Texture name", texture_name)    
+    print("# Texture name", texture_name)
     if dump:
         mdr_obj.texture_name = texture_name
 
-    f.read(1) # always 2?
+    unk, = struct.unpack("b", f.read(1))
+    print("# Read unknown byte (always 2?):", unk)
+
+    print("# Start unknown section of 176 bytes", "0x%x" % f.tell())
     for i in range(0, 0xB0/4):
         unk, = struct.unpack("f", f.read(4))
-        #print( unk)
-    print( "#Finished unknown section", "0x%x" % f.tell())
+        if verbose:
+            print("# [%i] %i" % (i, unk))
+    print("# Finished unknown section", "0x%x" % f.tell())
 
     ###############################################
-    print( "#Start vertices")
+    print("# Start vertices")
     vertex_floats, = struct.unpack("<I", f.read(4))
-    print( "#Vertices", vertex_floats/3)
+    print("# Vertices", vertex_floats/3)
     manifest[u'vertex_offset'] = f.tell()
     
     for i in range(0, vertex_floats/3):
@@ -326,17 +336,18 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
             x,y,z = struct.unpack("fff", f.read(12))
             #print( "v",x,y,z)
             mdr_obj.vertex_array.append((x,y,z))
-    print( "#End vertices", "0x%x" % f.tell())
+    print("# End vertices", "0x%x" % f.tell())
     ###############################################
     
-    print( "#Start unknown")
+    print("# Start unknown")
     count, = struct.unpack("<I", f.read(4))
-    print( "# Unknown count", count) # 3 per vertex
+    print("# Unknown count", count) # 3 per vertex
     for i in range(0, count):
         unk, = struct.unpack("<H", f.read(2))
-        #print( "#",i, unk)
-    print( "#End unknown", "0x%x" % f.tell())
-    print( "# End model ##############################################################")
+        if verbose:
+            print("# [%i] %i" % (i, unk))
+    print("# End unknown", "0x%x" % f.tell())
+    print("# End model ##############################################################")
     f.read(4) # 0
     f.read(1)
 
@@ -349,43 +360,31 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for experimenting with mdr files.')
-    parser.add_argument('-p', '--parse-only', default=False, action='store_true', help='Only parse file, do not dump models')
+    parser.add_argument('-p', '--parse-only', default=False, action='store_true',
+                        help='Only parse file, do not dump models')
+    parser.add_argument('-v', '--verbose', default=False, action='store_true',
+                        help='Print more info useful for debugging')
     parser.add_argument('-o', '--outdir', default=os.getcwd(), help='Output path')
     parser.add_argument('file', nargs='?', help='Input file')
     args = parser.parse_args()
 
     filepath = None
-    if args.file == None:
+    if args.file is None:
         print("Error, supply a file as parameter")
         sys.exit()
-        #filepath = "simple\\ak-74-lod-2.mdr"    # type 2, 3 models
-        #filepath = "simple\\ak-74.mdr"         # type 2, 3 models
-        #filepath = "simple\\binoculars.mdr"    # type 0, 1 model
-        #filepath = "simple\\rdg-2.mdr"          # type 0, 1 model
-        #filepath ="simple\\grenade-anm8.mdr",   # type 0, 
-        #filepath = r"simple\mines sign.mdr"    # type 0
-        #filepath = "simple\\rpg-22-lod-3.mdr"  # type 0
-        #filepath = "simple\\grenade-missile.mdr"# type 1, 
-        #filepath = "simple\\at-3-missile.mdr"   # type 1, 
-        #filepath = "simple\\rpo-m-atgm.mdr"   # type 1,
-        #fileapath = "simple\\akms.mdr"          # type 2, 3 models, shockforce
-
-        #filepath = "simple\\makarov.mdr"       # type 2, 2 models
-        #filepath = "berettam9.mdr"              # type 2, 2 models
     else:
         filepath = args.file
     
-    print( "#",filepath)
+    print("# ", filepath)
     base_name = os.path.splitext(os.path.basename(filepath))[0]
     model_manifests = []
     with open(filepath, "rb") as f:
         num_models, = struct.unpack("<Ix", f.read(5))
-        print( "# number of models", num_models)
+        print("# number of models", num_models)
         for i in range(0, num_models):
-            manifest = dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only)
+            manifest = dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only, args.verbose)
             model_manifests.append(manifest)
             
     if not args.parse_only:
         with open("%s_manifest.json" % base_name, "wb") as f:
             print(json.dumps([u'%s' % base_name, model_manifests], indent=4), file=f)
-
