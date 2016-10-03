@@ -48,6 +48,7 @@ class MDR_Object:
         self.uv_array = []      # [ (f,f) ...]        
         self.vertex_array = []  # [ (f,f,f) ...]        
         self.texture_name = ""
+        self.material = None
         #TODO add meta data objects
 
     def make_wavefront_obj(self):
@@ -81,10 +82,16 @@ class MDR_Object:
         """ Create a material definitin file."""
         string = ""
         string += "newmtl Diffuse\n"
-        string += "Ka 0.5 0.5 0.5 # gray\n"   # ambient color
-        string += "Kd 0.5 0.5 0.5 # gray\n"   # diffuse color
-        string += "Ks 0.0 0.0 0.0\n"          # specular color, off
-        string += "Ns 0.0\n"                  # specular exponent
+        if self.material is None:
+            string += "Ka 0.5 0.5 0.5 # gray\n"   # ambient color
+            string += "Kd 0.5 0.5 0.5 # gray\n"   # diffuse color
+            string += "Ks 0.0 0.0 0.0\n"          # specular color, off
+            string += "Ns 0.0\n"                  # specular exponent
+        else:
+            string += "Ka %f %f %f\n" % (self.material["ambient_color"])
+            string += "Kd %f %f %f\n" % (self.material["diffuse_color"])
+            string += "Ks %f %f %f\n" % (self.material["specular_color"])
+            string += "Ns %f\n" % (self.material["specular_exponent"])
         string += "d 1.0\n"                   # transparency        
         string += "illum 1\n"                 # Color on and Ambient on
         string += "map_Kd %s.bmp\n" % self.texture_name
@@ -229,6 +236,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
             meta1 = read_material(f)
+            if dump:
+                mdr_obj.material = meta1
             manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
             print("# Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 0", "0x%x" % f.tell())
