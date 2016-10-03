@@ -111,6 +111,29 @@ def read_matrix(f):
     return meta
 
 
+def read_material(f):
+    print("# Start reading material", "0x%x" % f.tell())
+    unknown_constants = struct.unpack("ff", f.read(8))
+    print("# Unknown constants", unknown_constants)
+    ambient_color = struct.unpack("fff", f.read(4 * 3))
+    print("# Ambient color", ambient_color)
+    diffuse_color = struct.unpack("fff", f.read(4 * 3))
+    print("# Diffuse color", diffuse_color)
+    specular_color = struct.unpack("fff", f.read(4 * 3))
+    print("# Specular color", specular_color)
+    specular_exponent, = struct.unpack("f", f.read(4))
+    print("# Specular exponent", specular_exponent)
+    print("# End material", "0x%x" % f.tell())
+
+    material = {}
+    material["unknown_constants"] = unknown_constants
+    material["ambient_color"] = ambient_color
+    material["diffuse_color"] = diffuse_color
+    material["specular_color"] = specular_color
+    material["specular_exponent"] = specular_exponent
+    return material
+
+
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verbose=False):
     print("# Start model", "0x%x" % f.tell(), "##############################################################")
     name_length, = struct.unpack("<H", f.read(2))
@@ -197,19 +220,16 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
         if object_type == 0: #TODO not object type, but count of meta data?
             print( "# Object type 0, reading some metadata of size 0x68")
             #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
-            manifest[u'type0'] = []
+            manifest[u'material'] = []
             length, = struct.unpack("<H", f.read(2))
             meta0_offset = f.tell()
             # first set of meta data is some kind of text, probably random garbage
             print("# random garbage? ", "0x%x" % f.tell())
             unk = f.read(48)
-            #meta0 = readMatrix(f)    
-            #manifest[u'type0'].append( ( {u'offset': meta0_offset}, meta0) )
             length, = struct.unpack("<H", f.read(2))
             meta1_offset = f.tell()
-            # Second row and third row of meta1 affect ambient color
-            meta1 = read_matrix(f)
-            manifest[u'type0'].append( ( {u'offset': meta1_offset}, meta1) )
+            meta1 = read_material(f)
+            manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
             print("# Unknown float", struct.unpack("f", f.read(4)))
             print("# end object type 0", "0x%x" % f.tell())
         elif object_type == 1:

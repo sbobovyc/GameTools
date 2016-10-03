@@ -52,13 +52,14 @@ class SimpleOBJ:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for mutating mdr files.')
-    parser.add_argument('file', nargs='?', help='Input file')
+    parser.add_argument('file', nargs='?', help='Input manifest json file')
     parser.add_argument('--scale', '-s', default=1.0, help='Scaling factor')
+    parser.add_argument('-o', '--outdir', default=os.getcwd(), help='Output path')
     args = parser.parse_args()
     scale = float(args.scale)
 
     print(args)
-    if args.file == None:
+    if args.file is None:
         print("Error, supply a file as parameter")
         sys.exit()
     
@@ -66,7 +67,10 @@ if __name__ == "__main__":
         obj = json.loads(f.read())
         name = obj[0]
         print("Name", name)
-    with open(name+".mdr", "r+b") as f_mdr:
+    with open(name + ".mdr", "rb") as f_mdr_orig:
+        bindata = f_mdr_orig.read()
+    with open(os.path.join(args.outdir, name+".mdr"), "wb") as f_mdr:
+        f_mdr.write(bindata)  # copy file
         for sub_module in obj[1]:
             obj_name = "%s_%s.obj" % (sub_module[u'model'], sub_module[u'sub_model'])
             print(obj_name)
@@ -93,10 +97,19 @@ if __name__ == "__main__":
                 f_mdr.write(new_vertex)
             print("End vert at", hex(f_mdr.tell()))
 
-            if u'type0' in sub_module.keys():
-                for mat in sub_module[u'type0']:
+            if u'material' in sub_module.keys():
+                for mat in sub_module[u'material']:
                     f_mdr.seek(mat[0][u'offset'])
-                    for row in mat[1]:
-                        packed_row = struct.pack("fff", *row[:-1])
-                        f_mdr.write(packed_row)
-                    
+                    bindata = struct.pack("ff", *mat[1][u'unknown_constants'])
+                    f_mdr.write(bindata)
+                    bindata = struct.pack("fff", *mat[1][u'ambient_color'])
+                    f_mdr.write(bindata)
+                    bindata = struct.pack("fff", *mat[1][u'diffuse_color'])
+                    f_mdr.write(bindata)
+                    bindata = struct.pack("fff", *mat[1][u'specular_color'])
+                    f_mdr.write(bindata)
+                    bindata = struct.pack("f", mat[1][u'specular_exponent'])
+                    f_mdr.write(bindata)
+                    # for row in mat[1]:
+                    #     packed_row = struct.pack("fff", *row[:-1])
+                    #     f_mdr.write(packed_row)
