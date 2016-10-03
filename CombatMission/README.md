@@ -1,11 +1,17 @@
-To view the help message:
-python brz_magick.py -h
+**Modding tools for Combat Mission**
 
-To compress a directory with files:
-python brz_magick.py -c mydir
+Requirements
+
+ - Python 2.7
+
+To view the help message of scripts:
+python brz_magick.py -h
 
 To extract a brz file:
 python brz_magick.py -x my_file.brz
+
+To compress a directory with files into brz:
+python brz_magick.py -c mydir
 
 To dump mdr file to OBJ and manifest:
 python unmdr.py crate1.mdr
