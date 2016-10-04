@@ -427,5 +427,5 @@ if __name__ == "__main__":
             model_manifests.append(manifest)
             
     if not args.parse_only:
-        with open("%s_manifest.json" % base_name, "wb") as f:
+        with open(os.path.join(args.outdir, "%s_manifest.json" % base_name), "wb") as f:
             print(json.dumps([u'%s' % base_name, model_manifests], indent=4), file=f)
