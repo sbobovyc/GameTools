@@ -67,14 +67,14 @@ if __name__ == "__main__":
         obj = json.loads(f.read())
         name = obj[0]
         print("Name", name)
-    with open(name + ".mdr", "rb") as f_mdr_orig:
+    with open(os.path.join(os.path.dirname(args.file), name + ".mdr"), "rb") as f_mdr_orig:
         bindata = f_mdr_orig.read()
     with open(os.path.join(args.outdir, name+".mdr"), "wb") as f_mdr:
         f_mdr.write(bindata)  # copy file
         for sub_module in obj[1]:
             obj_name = "%s_%s.obj" % (sub_module[u'model'], sub_module[u'sub_model'])
             print(obj_name)
-            obj = SimpleOBJ(obj_name)
+            obj = SimpleOBJ(os.path.join(os.path.dirname(args.file), obj_name))
             
             f_mdr.seek(sub_module[u'vertex_index_offset'])
             print("Writing vert index at", hex(f_mdr.tell()))
