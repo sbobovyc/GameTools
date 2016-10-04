@@ -57,7 +57,7 @@ class MDR_Object:
         string += "o %s\n" % self.name
         # write material info
         string += "mtllib %s\n" % self.name
-        string += "usemtl Diffuse\n"
+        string += "usemtl %s\n" % self.name
 
         use_Blender_order = True
         # write vertex info
@@ -79,9 +79,9 @@ class MDR_Object:
         return string
 
     def make_wavefront_mtl(self):
-        """ Create a material definitin file."""
+        """ Create a material definition file."""
         string = ""
-        string += "newmtl Diffuse\n"
+        string += "newmtl %s\n" % self.name
         if self.material is None:
             string += "Ka 0.5 0.5 0.5 # gray\n"   # ambient color
             string += "Kd 0.5 0.5 0.5 # gray\n"   # diffuse color
