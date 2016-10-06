@@ -98,16 +98,17 @@ class brz_file_entry(object):
         return "%s, %s, 0x%x, %i" % (self.dir, self.name, self.offset, self.file_size)
     
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Tool that can unpack/pack Combat Mission brz files.')
+    parser = argparse.ArgumentParser(description='Tool that can unpack/pack Combat Mission brz files.',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('filepath', nargs='?', help='BRZ file or directory')
     parser.add_argument('-x', '--extract', default=False, action='store_true', help="Unpack brz file")
     parser.add_argument('-c', '--compress', default=False, action='store_true', help="Pack files into brz")
-    parser.add_argument('-o', '--outdir', default=None, help='Output directory')
+    parser.add_argument('-o', '--outdir', default=os.getcwd(), help='Output directory')
     parser.add_argument('-v', '--verbose', default=False, action='store_true', help='Print info as files are unpacked')
     args = parser.parse_args()
     
     filepath = args.filepath
-    outdir = os.getcwd() if args.outdir == None else args.outdir            
+    outdir = args.outdir
     if args.extract and not args.compress:
         brz_file(filepath).unpack(outdir, args.verbose)    
     elif args.compress and not args.extract:
