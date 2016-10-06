@@ -15,10 +15,13 @@ from __future__ import print_function
 from __future__ import division
 import argparse
 import struct
-import StringIO
 import os
 import errno
 import sys
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import BytesIO
 
 def update_progress(progress):
     sys.stdout.write('\r[{bar: <10}] {percent}%'.format(bar='#'*int(progress*10), percent=int(progress*100)))
@@ -45,15 +48,16 @@ class brz_file:
                 if verbose:
                     print(entry)
                 self.brz_file_list.append(entry)     
-            for i in range(0, count):                
-                directory = os.path.join(outdir, self.brz_file_list[i].dir)
+            for i in range(0, count):
+                directory = os.path.join(outdir, self.brz_file_list[i].dir.decode("ascii"))
                                 
-                try: os.makedirs(directory)
-                except OSError, err:
+                try: 
+                    os.makedirs(directory)
+                except OSError as err:
                     # Reraise the error unless it's about an already existing directory 
                     if err.errno != errno.EEXIST or not os.path.isdir(directory): 
                         raise
-                new_file = os.path.join(outdir, self.brz_file_list[i].dir, self.brz_file_list[i].name)
+                new_file = os.path.join(outdir, self.brz_file_list[i].dir.decode("ascii"), self.brz_file_list[i].name.decode("ascii"))
                 with open(new_file, "wb") as f_new:
                     f.seek(self.brz_file_list[i].offset)
                     if i != count-1:
@@ -65,7 +69,10 @@ class brz_file:
                         
     def pack(self, directory, verbose=False):
         # walk through dirs and get file paths, file sizes and add lengths of file paths
-        buf = StringIO.StringIO()
+        if sys.version_info <= (3,0):
+            buf = StringIO()
+        else:
+            buf = BytesIO()
         with open(self.path, "wb") as f:
             f.write(struct.pack("II", 0,0))
             for dirpath, dirnames, filenames in os.walk(directory):
@@ -78,11 +85,11 @@ class brz_file:
             f.write(struct.pack("<I", len(self.brz_file_list)))
             offset = f.tell()
             for entry in self.brz_file_list:
-                offset += len(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), entry.offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
+                offset += len(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), entry.offset, len(entry.name), entry.name.encode("ascii"), len(entry.dir), entry.dir.encode("ascii")))
                 with open(os.path.join(os.path.dirname(directory), entry.dir, entry.name), "rb") as ef:
                     buf.write(ef.read())
             for entry in self.brz_file_list:                
-                f.write(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), offset, len(entry.name), entry.name, len(entry.dir), entry.dir))
+                f.write(struct.pack("<IH%isH%is" % (len(entry.name), len(entry.dir)), offset, len(entry.name), entry.name.encode("ascii"), len(entry.dir), entry.dir.encode("ascii")))
                 offset += entry.file_size
             f.write(buf.getvalue())
             
