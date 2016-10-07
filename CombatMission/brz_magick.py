@@ -23,11 +23,13 @@ try:
 except ImportError:
     from io import BytesIO
 
+
 def update_progress(progress):
     sys.stdout.write('\r[{bar: <10}] {percent}%'.format(bar='#'*int(progress*10), percent=int(progress*100)))
     sys.stdout.flush()
 
-class brz_file:
+
+class BrzFile:
     def __init__(self, path):
         self.path = path
         self.file_count = 0
@@ -36,15 +38,15 @@ class brz_file:
     def unpack(self, outdir, verbose=False):
         with open(self.path, "rb") as f:
             u1,count = struct.unpack("<II", f.read(8))
-            #print("Unknown int: %i)
-            print("File count: %i" % (count))
+            # print("Unknown int: ", u1)
+            print("File count: %i" % count)
             for i in range(0,count):
                 offset, = struct.unpack("<I", f.read(4))
                 name_len, = struct.unpack("<H", f.read(2))
                 file_name, = struct.unpack("%is" % name_len, f.read(name_len))        
                 dir_len, = struct.unpack("<H", f.read(2))
                 dir_name, = struct.unpack("%is" % dir_len, f.read(dir_len))
-                entry = brz_file_entry(file_name, dir_name, offset)
+                entry = BrzFileEntry(file_name, dir_name, offset)
                 if verbose:
                     print(entry)
                 self.brz_file_list.append(entry)     
@@ -78,7 +80,7 @@ class brz_file:
             for dirpath, dirnames, filenames in os.walk(directory):
                 for filename in filenames:
                     rel_dir_path = os.path.relpath(dirpath, os.path.dirname(directory))
-                    entry = brz_file_entry(filename, rel_dir_path, 0, os.path.getsize(os.path.join(dirpath, filename)))
+                    entry = BrzFileEntry(filename, rel_dir_path, 0, os.path.getsize(os.path.join(dirpath, filename)))
                     print(entry)
                     self.brz_file_list.append(entry)
             f.seek(4)
@@ -94,7 +96,7 @@ class brz_file:
             f.write(buf.getvalue())
             
             
-class brz_file_entry(object):
+class BrzFileEntry(object):
     def __init__(self, name, path, offset, size=0):
         self.name = name
         self.dir = path
@@ -117,16 +119,11 @@ if __name__ == '__main__':
     filepath = args.filepath
     outdir = args.outdir
     if args.extract and not args.compress:
-        brz_file(filepath).unpack(outdir, args.verbose)    
+        BrzFile(filepath).unpack(outdir, args.verbose)
     elif args.compress and not args.extract:
         indir = os.path.split(filepath)[1]
         outfile = indir + ".brz"
-        brz_file(outfile).pack(filepath)
+        BrzFile(outfile).pack(filepath)
     else:
         print("Unknown command")
         parser.print_help()
-    
-
-
-            
-            
