@@ -52,7 +52,7 @@ class BrzFile:
                 self.brz_file_list.append(entry)     
             for i in range(0, count):
                 directory = os.path.join(outdir, self.brz_file_list[i].dir.decode("ascii"))
-                                
+                directory = directory.replace('\\', '/')
                 try: 
                     os.makedirs(directory)
                 except OSError as err:
@@ -60,6 +60,7 @@ class BrzFile:
                     if err.errno != errno.EEXIST or not os.path.isdir(directory): 
                         raise
                 new_file = os.path.join(outdir, self.brz_file_list[i].dir.decode("ascii"), self.brz_file_list[i].name.decode("ascii"))
+                new_file = new_file.replace('\\', '/')
                 with open(new_file, "wb") as f_new:
                     f.seek(self.brz_file_list[i].offset)
                     if i != count-1:
