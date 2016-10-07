@@ -116,14 +116,14 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--outdir', default=os.getcwd(), help='Output directory')
     parser.add_argument('-v', '--verbose', default=False, action='store_true', help='Print info as files are unpacked')
     args = parser.parse_args()
-    
+
     filepath = args.filepath
     outdir = args.outdir
     if args.extract and not args.compress:
         BrzFile(filepath).unpack(outdir, args.verbose)
     elif args.compress and not args.extract:
-        indir = os.path.split(filepath)[1]
-        outfile = indir + ".brz"
+        indir = os.path.split(filepath)[0]
+        outfile = os.path.join(args.outdir, indir + ".brz")
         BrzFile(outfile).pack(filepath)
     else:
         print("Unknown command")
