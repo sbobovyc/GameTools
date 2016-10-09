@@ -322,7 +322,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                     length, = struct.unpack("<H", f.read(2))
                     unknown_meta2 = f.read(length)
                     print("Sub-meta", unknown_meta2)
-                    valid_sub_meta = ["eject", "gunner", "link", "muzzle", "firespot", "weapon eject", "weapon muzzle", "weapon2 muzzle"]
+                    valid_sub_meta = ["eject", "gunner", "leader", "link", "muzzle", "firespot", "smoke",
+                                      "weapon eject", "weapon muzzle", "weapon2 muzzle", "weapon3 muzzle", "weapon4 muzzle"]
                     print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                     if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
                         read_matrix(f)
@@ -331,17 +332,19 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                         print("#End of sub-meta", "0x%x" % f.tell())
                     else:                        
                         read_matrix(f)
-                        print("#Possible error! Report about it on the forum.")
+                        print("#Possible error0! Report about it on the forum.")
                         print("#End of sub-meta", "0x%x" % f.tell())
                         sys.exit(0)                                                
-                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or unknown_meta == "tripod" or unknown_meta == "mount" or unknown_meta == "hull":
+                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or \
+                                unknown_meta == "tripod" or unknown_meta == "mount" or unknown_meta == "hull" or \
+                                unknown_meta == "turret":
                     f.read(0x68)
                 else:
-                    print("# Possible error! (%s) Report about it on the forum." % unknown_meta)
+                    print("# Possible error1! (%s) Report about it on the forum." % unknown_meta)
                     sys.exit(0)
         else:
             f.read(0xCC)
-            print("#Possible error! Report about it on the forum.")
+            print("#Possible error2! Report about it on the forum.")
             sys.exit(0)
         print("# Unknown meta finished", "0x%x" % f.tell())
 
@@ -389,7 +392,8 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             print("# [%i] %i" % (i, unk))
     print("# End unknown", "0x%x" % f.tell())
     print("# End model ##############################################################")
-    f.read(4) # 0
+    unk, = struct.unpack("<I", f.read(4))
+    print("# Read 4 bytes, at end of model (always 0?)", unk)
     f.read(1)
 
     if dump: 
