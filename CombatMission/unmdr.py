@@ -383,14 +383,14 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# End vertices", "0x%x" % f.tell())
     ###############################################
     
-    print("# Start unknown")
+    print("# Start vertex normals")
     count, = struct.unpack("<I", f.read(4))
-    print("# Unknown count", count) # 3 per vertex
-    for i in range(0, count):
-        unk, = struct.unpack("<H", f.read(2))
+    print("# Normals count", count/3) # 3 per vertex
+    for i in range(0, count/3):
+        nx,ny,nz = struct.unpack("<HHH", f.read(6))
         if verbose:
-            print("# [%i] %i" % (i, unk))
-    print("# End unknown", "0x%x" % f.tell())
+            print("# [%i] %i %i %i" % (i, nx, ny, nz))
+    print("# End normals", "0x%x" % f.tell())
     print("# End model ##############################################################")
     unk, = struct.unpack("<I", f.read(4))
     print("# Read 4 bytes, at end of model (always 0?)", unk)
