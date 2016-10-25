@@ -305,7 +305,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print("# unknown meta2", unknown_meta)
-        valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
+        valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
         valid_building_meta_list = ["level 0", "roof", "wall-left-level 0", "wall-rear-level 0", "wall-front-level 0", "wall-right-level 0"]
         valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "mount", "muzzle", "turret", "wheel"]
         valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
