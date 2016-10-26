@@ -319,9 +319,11 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length)
         print("# unknown meta2", unknown_meta)
-        valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon"]
-        valid_building_meta_list = ["level 0", "roof", "wall-left-level 0", "wall-rear-level 0", "wall-front-level 0", "wall-right-level 0"]
-        valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "mount", "muzzle", "turret", "wheel"]
+        valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight",
+                                  "m1a2", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon", "periscope_circle",
+                                  "mgbracket", "crows_structure", "launcher support"]
+        valid_building_meta_list = ["junkdebris", "level", "roof", "wall"]
+        valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "loadershield", "mount", "muzzle", "turret", "wheel"]
         valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
         
         if True in map(lambda x: unknown_meta.startswith(x), valid_meta_list):
@@ -332,12 +334,12 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             if count == 0:
                 f.read(0x68)
             else:
-                for i in range(0, count):                    
+                for i in range(0, count):
                     length, = struct.unpack("<H", f.read(2))
                     unknown_meta2 = f.read(length)
                     print("Sub-meta", unknown_meta2)
-                    valid_sub_meta = ["eject", "gunner", "leader", "link", "muzzle", "firespot", "smoke",
-                                      "weapon eject", "weapon muzzle", "weapon2 muzzle", "weapon3 muzzle", "weapon4 muzzle"]
+                    valid_sub_meta = ["commander", "eject", "gunner", "leader", "loader", "link", "muzzle",
+                                      "firespot", "smoke", "weapon"]
                     print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                     if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
                         read_matrix(f)
@@ -346,19 +348,18 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                         print("#End of sub-meta", "0x%x" % f.tell())
                     else:                        
                         read_matrix(f)
-                        print("#Possible error0! Report about it on the forum.")
+                        print("#Possible error0 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta2))
                         print("#End of sub-meta", "0x%x" % f.tell())
-                        sys.exit(0)                                                
-                if unknown_meta == "weapon" or unknown_meta == "base2" or unknown_meta == "base3" or \
-                                unknown_meta == "tripod" or unknown_meta == "mount" or unknown_meta == "hull" or \
-                                unknown_meta == "turret":
+                        sys.exit(0)
+                special_meta_list = ["weapon", "base", "tripod", "launcher support", "mount", "hull", "turret"]
+                if True in map(lambda x: unknown_meta.startswith(x), special_meta_list):
                     f.read(0x68)
                 else:
-                    print("# Possible error1! (%s) Report about it on the forum." % unknown_meta)
+                    print("# Possible error1 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
                     sys.exit(0)
         else:
             f.read(0xCC)
-            print("#Possible error2! Report about it on the forum.")
+            print("#Possible error2 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
             sys.exit(0)
         print("# Unknown meta finished", "0x%x" % f.tell())
 
