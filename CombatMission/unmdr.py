@@ -28,12 +28,17 @@ from pprint import pprint
 def float2string(f):
     return "{0:.12f}".format(f)
 
+def short2float(value):
+    return float(value + 2**15) / 2**15 - 1.0
+
 ########
 # object:
 # face indices
 # UVs,
 # then,
 # vertices (in object space?)
+# then,
+# normals
 ####
 
 class MDR_Object:
@@ -46,7 +51,8 @@ class MDR_Object:
         self.name = name
         self.index_array = []   # [ (i,i,i) ...]
         self.uv_array = []      # [ (f,f) ...]        
-        self.vertex_array = []  # [ (f,f,f) ...]        
+        self.vertex_array = []  # [ (f,f,f) ...]
+        self.vertex_normal_array = []  # [ (i16,i16,i16) ...]
         self.texture_name = ""
         self.material = None
         #TODO add meta data objects
@@ -65,16 +71,24 @@ class MDR_Object:
             for vert in self.vertex_array:
                 string += "v %s %s %s\n" % ( float2string(vert[0]), float2string(vert[1]), float2string(vert[2]))
             for uv in self.uv_array:
-                string += "vt %s %s\n" % (uv[0], uv[1])                  
+                string += "vt %s %s\n" % (uv[0], uv[1])
+            for norm in self.vertex_normal_array:
+                string += "vn %s %s %s\n" % (short2float(norm[0]), short2float(norm[1]), short2float(norm[2]))
             for idx in self.index_array:
-                string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)          
+                string += "f %i/%i/%i %i/%i/%i %i/%i/%i\n" % (
+                idx[0] + 1, idx[0] + 1, idx[0] + 1, idx[1] + 1, idx[1] + 1, idx[1] + 1, idx[2] + 1, idx[2] + 1,
+                idx[2] + 1)
         else:
             for idx in self.index_array:
-                string += "f %i/%i %i/%i %i/%i\n" % (idx[0]+1,idx[0]+1,idx[1]+1,idx[1]+1,idx[2]+1,idx[2]+1)
+                string += "f %i/%i/%i %i/%i/%i %i/%i/%i\n" % (
+                idx[0] + 1, idx[0] + 1, idx[0] + 1, idx[1] + 1, idx[1] + 1, idx[1] + 1, idx[2] + 1, idx[2] + 1,
+                idx[2] + 1)
             for uv in self.uv_array:
                 string += "vt %s %s\n" % (uv[0], uv[1])            
             for vert in self.vertex_array:
                 string += "v %s %s %s\n" % ( float2string(vert[0]), float2string(vert[1]), float2string(vert[2]))
+            for norm in self.vertex_normal_array:
+                string += "vn %s %s %s\n" % (short2float(norm[0]), short2float(norm[1]), short2float(norm[2]))
 
         return string
 
@@ -387,9 +401,13 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     count, = struct.unpack("<I", f.read(4))
     print("# Normals count", count/3) # 3 per vertex
     for i in range(0, count/3):
-        nx,ny,nz = struct.unpack("<HHH", f.read(6))
-        if verbose:
-            print("# [%i] %i %i %i" % (i, nx, ny, nz))
+        if not dump:
+            f.read(6)
+        else:
+            nx, ny, nz = struct.unpack("<HHH", f.read(6))
+            if verbose:
+                print("# [%i] %i %i %i" % (i, nx, ny, nz))
+            mdr_obj.vertex_normal_array.append((nx, ny, nz))
     print("# End normals", "0x%x" % f.tell())
     print("# End model ##############################################################")
     unk, = struct.unpack("<I", f.read(4))
@@ -429,7 +447,7 @@ if __name__ == "__main__":
         for i in range(0, num_models):
             manifest = dump_model(base_name, num_models, f, i, args.outdir, not args.parse_only, args.verbose)
             model_manifests.append(manifest)
-            
+
     if not args.parse_only:
         with open(os.path.join(args.outdir, "%s_manifest.json" % base_name), "wb") as f:
             print(json.dumps([u'%s' % base_name, model_manifests], indent=4), file=f)
