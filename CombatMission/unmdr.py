@@ -25,8 +25,10 @@ import argparse
 import json
 from pprint import pprint
 
+
 def float2string(f):
     return "{0:.12f}".format(f)
+
 
 def short2float(value):
     return float(value + 2**15) / 2**15 - 1.0
@@ -40,6 +42,7 @@ def short2float(value):
 # then,
 # normals
 ####
+
 
 class MDR_Object:
     """MDR object
@@ -159,7 +162,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Start model", "0x%x" % f.tell(), "##############################################################")
     name_length, = struct.unpack("<H", f.read(2))
     print("# submodel name length", name_length)
-    submodel_name = f.read(name_length)
+    submodel_name = f.read(name_length).decode("ascii")
     print("# submodel name", submodel_name)
 
     # output files
@@ -180,7 +183,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     unk, = struct.unpack("b", f.read(1))
     print("# Read unknown byte (always 2?):", unk)
     print("# Start unknown section", "0x%x" % f.tell())    
-    for i in range(0, 0xB0/4):
+    for i in range(0, int(0xB0/4)):
         unk, = struct.unpack("f", f.read(4))
         if verbose:
             print("# [%i] %f" % (i, unk))
@@ -193,7 +196,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Face count:", face_count/3)
     manifest = {u'model' : base_name, u'sub_model': submodel_name, u'vertex_index_offset' : f.tell()}    
     
-    for i in range(0, face_count/3):        
+    for i in range(0, int(face_count/3)):
         if not dump:
             f.read(6)
         else:
@@ -210,7 +213,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
 
     manifest[u'uv_offset'] = f.tell()    
     
-    for i in range(0, uv_in_section/2):
+    for i in range(0, int(uv_in_section/2)):
         if not dump:
             f.read(8)
         else:
@@ -226,7 +229,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
 
     if model_number == 0:
         print("# Some matrix?")
-        for i in range(0, 0x30/4):
+        for i in range(0, int(0x30/4)):
             unk1,unk2 = struct.unpack("ff", f.read(8))
             if verbose:
                 print("# [%i] %f, %f" % (i, unk1, unk2))
@@ -317,7 +320,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             print("# End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
-        unknown_meta = f.read(length)
+        unknown_meta = f.read(length).decode("ascii")
         print("# unknown meta2", unknown_meta)
         valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight",
                                   "m1a2", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon", "periscope_circle",
@@ -336,7 +339,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             else:
                 for i in range(0, count):
                     length, = struct.unpack("<H", f.read(2))
-                    unknown_meta2 = f.read(length)
+                    unknown_meta2 = f.read(length).decode("ascii")
                     print("Sub-meta", unknown_meta2)
                     valid_sub_meta = ["commander", "eject", "gunner", "leader", "loader", "link", "muzzle",
                                       "firespot", "smoke", "weapon"]
@@ -358,7 +361,6 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                     print("# Possible error1 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
                     sys.exit(0)
         else:
-            f.read(0xCC)
             print("#Possible error2 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
             sys.exit(0)
         print("# Unknown meta finished", "0x%x" % f.tell())
@@ -367,7 +369,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Read 4 bytes (always 0?)", unk)
 
     name_length, = struct.unpack("<H", f.read(2))
-    texture_name = f.read(name_length)
+    texture_name = f.read(name_length).decode("ascii")
     print("# Texture name", texture_name)
     if dump:
         mdr_obj.texture_name = texture_name
@@ -376,7 +378,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Read unknown byte (always 2?):", unk)
 
     print("# Start unknown section of 176 bytes", "0x%x" % f.tell())
-    for i in range(0, 0xB0/4):
+    for i in range(0, int(0xB0/4)):
         unk, = struct.unpack("f", f.read(4))
         if verbose:
             print("# [%i] %i" % (i, unk))
@@ -388,20 +390,19 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Vertices", vertex_floats/3)
     manifest[u'vertex_offset'] = f.tell()
     
-    for i in range(0, vertex_floats/3):
+    for i in range(0, int(vertex_floats/3)):
         if not dump:
             f.read(12)
         else:
-            x,y,z = struct.unpack("fff", f.read(12))
-            #print( "v",x,y,z)
-            mdr_obj.vertex_array.append((x,y,z))
+            x, y, z = struct.unpack("fff", f.read(12))
+            mdr_obj.vertex_array.append((x, y, z))
     print("# End vertices", "0x%x" % f.tell())
     ###############################################
     
     print("# Start vertex normals")
     count, = struct.unpack("<I", f.read(4))
     print("# Normals count", count/3) # 3 per vertex
-    for i in range(0, count/3):
+    for i in range(0, int(count/3)):
         if not dump:
             f.read(6)
         else:
@@ -415,10 +416,11 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Read 4 bytes, at end of model (always 0?)", unk)
     f.read(1)
 
-    if dump: 
-        print(mdr_obj.make_wavefront_obj(), file=obj_fout)
-        print(mdr_obj.make_wavefront_mtl(), file=mtl_fout)
-        obj_fout.close()        
+    if dump:
+        obj_fout.write(mdr_obj.make_wavefront_obj().encode("ascii"))
+        mtl_fout.write(mdr_obj.make_wavefront_mtl().encode("ascii"))
+        obj_fout.close()
+        mtl_fout.close()
     logger.close()
     return manifest
 
@@ -450,5 +452,5 @@ if __name__ == "__main__":
             model_manifests.append(manifest)
 
     if not args.parse_only:
-        with open(os.path.join(args.outdir, "%s_manifest.json" % base_name), "wb") as f:
-            print(json.dumps([u'%s' % base_name, model_manifests], indent=4), file=f)
+        with open(os.path.join(args.outdir, "%s_manifest.json" % base_name), "w") as f:
+            json.dump([u'%s' % base_name, model_manifests], f, indent=4)
