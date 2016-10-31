@@ -217,7 +217,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     uv_in_section, = struct.unpack("<I", f.read(4))
     print("# UV in section:", uv_in_section/2)
 
-    manifest[u'uv_offset'] = f.tell()    
+    manifest[u'vertex_uv_offset'] = f.tell()
     
     for i in range(0, int(uv_in_section/2)):
         if not dump:
@@ -406,7 +406,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     ###############################################
     print("# Start vertices")
     vertex_floats, = struct.unpack("<I", f.read(4))
-    print("# Vertices", vertex_floats/3)
+    print("# Vertex count:", vertex_floats/3)
     manifest[u'vertex_offset'] = f.tell()
     
     for i in range(0, int(vertex_floats/3)):
@@ -420,7 +420,9 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     
     print("# Start vertex normals")
     normal_count, = struct.unpack("<I", f.read(4))
-    print("# Normals count", normal_count/3) # 3 per vertex
+    print("# Normals count:", normal_count/3) # 3 per vertex
+    manifest[u'vertex_normals_offset'] = f.tell()
+
     for i in range(0, int(normal_count/3)):
         if not dump:
             f.read(6)
@@ -431,6 +433,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             mdr_obj.vertex_normal_array.append((nx, ny, nz))
     print("# End normals", "0x%x" % f.tell())
     print("# End model ##############################################################")
+
     unk, = struct.unpack("<I", f.read(4))
     print("# Read 4 bytes, at end of model (always 0?)", unk)
     if unk != 0:

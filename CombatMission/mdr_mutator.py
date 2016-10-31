@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 """@package mdr_mutator
 Documentation for this module. 
 More details.
@@ -36,7 +34,7 @@ class SimpleOBJ:
         VIpattern = re.compile('f (\d+)/(\d+) (\d+)/(\d+) (\d+)/(\d+)')
         VTpattern = re.compile('vt (\d+.\d+) (\d+.\d+)')        
         Vpattern = re.compile('v ([-]?\d+.\d+) ([-]?\d+.\d+) ([-]?\d+.\d+)')        
-        with open(path, "rb") as f:
+        with open(path, "r") as f:
             lines = f.readlines()
             for line in lines:
                 match = VIpattern.match(line)
@@ -63,7 +61,7 @@ if __name__ == "__main__":
         print("Error, supply a file as parameter")
         sys.exit()
     
-    with open(args.file, "rb") as f:
+    with open(args.file, "r") as f:
         obj = json.loads(f.read())
         name = obj[0]
         print("Name", name)
@@ -83,7 +81,7 @@ if __name__ == "__main__":
                 f_mdr.write(new_vi)
             print("End vert index at", hex(f_mdr.tell()))
 
-            f_mdr.seek(sub_module[u'uv_offset'])
+            f_mdr.seek(sub_module[u'vertex_uv_offset'])
             print("Writing uv at", hex(f_mdr.tell()))
             for uv in obj.uv_array:
                 new_uv = struct.pack("ff", *uv)
