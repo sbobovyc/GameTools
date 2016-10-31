@@ -433,6 +433,11 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# End model ##############################################################")
     unk, = struct.unpack("<I", f.read(4))
     print("# Read 4 bytes, at end of model (always 0?)", unk)
+    if unk != 0:
+        for i in range(0, 128):
+            print(struct.unpack("<I", f.read(4)))
+        print("End 0x%x" % f.tell())
+        # raise ValueError("Unknown is not 0")
     f.read(1)
 
     if dump:
