@@ -78,9 +78,11 @@ class MDR_Object:
             for norm in self.vertex_normal_array:
                 string += "vn %s %s %s\n" % (short2float(norm[0]), short2float(norm[1]), short2float(norm[2]))
             for idx in self.index_array:
-                string += "f %i/%i/%i %i/%i/%i %i/%i/%i\n" % (
-                idx[0] + 1, idx[0] + 1, idx[0] + 1, idx[1] + 1, idx[1] + 1, idx[1] + 1, idx[2] + 1, idx[2] + 1,
-                idx[2] + 1)
+                # string += "f %i/%i/%i %i/%i/%i %i/%i/%i\n" % (
+                # idx[0] + 1, idx[0] + 1, idx[0] + 1, idx[1] + 1, idx[1] + 1, idx[1] + 1, idx[2] + 1, idx[2] + 1,
+                # idx[2] + 1)
+                string += "f %i/%i %i/%i %i/%i\n" % (
+                idx[0] + 1, idx[0] + 1, idx[1] + 1, idx[1] + 1, idx[2] + 1, idx[2] + 1)
         else:
             for idx in self.index_array:
                 string += "f %i/%i/%i %i/%i/%i %i/%i/%i\n" % (
