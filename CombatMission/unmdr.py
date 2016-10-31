@@ -163,9 +163,9 @@ def read_material(f):
 def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verbose=False):
     print("# Start model", "0x%x" % f.tell(), "##############################################################")
     name_length, = struct.unpack("<H", f.read(2))
-    print("# submodel name length", name_length)
+    print("# submodel name length:", name_length)
     submodel_name = f.read(name_length).decode("ascii")
-    print("# submodel name", submodel_name)
+    print("# submodel name:", submodel_name)
 
     # output files
     obj_fout = None
@@ -184,6 +184,10 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
 
     unk, = struct.unpack("b", f.read(1))
     print("# Read unknown byte (always 2?):", unk)
+    if unk != 2:
+        error_message = "Unknown is not 2"
+        #raise ValueError(error_message)
+        print(error_message)
     print("# Start unknown section", "0x%x" % f.tell())    
     for i in range(0, int(0xB0/4)):
         unk, = struct.unpack("f", f.read(4))
@@ -196,7 +200,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     print("# Start face vertex indices")
     face_count, = struct.unpack("<I", f.read(4))
     print("# Face count:", face_count/3)
-    manifest = {u'model' : base_name, u'sub_model': submodel_name, u'vertex_index_offset' : f.tell()}    
+    manifest = {u'model': base_name, u'sub_model': submodel_name, u'vertex_index_offset' : f.tell()}
     
     for i in range(0, int(face_count/3)):
         if not dump:
@@ -239,6 +243,10 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
         print("# End unknown section", "0x%x" % f.tell())
         unk, = struct.unpack("<I", f.read(4))
         print("# Read 4 bytes (always 0?)", unk)
+        if unk != 0:
+            error_message = "Unknown is not 0"
+            #raise ValueError(error_message)
+            print(error_message)
         #TODO object_type is probably really count for some metadata
         object_type, = struct.unpack("<I", f.read(4))
         print("# Read 4 bytes, object type?: ", object_type)
@@ -323,27 +331,28 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length).decode("ascii")
-        print("# unknown meta2", unknown_meta)
+        print("# unknown meta2:", unknown_meta)
         valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight",
                                   "m1a2", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon", "periscope_circle",
                                   "mgbracket", "crows_structure", "launcher support"]
         valid_building_meta_list = ["junkdebris", "level", "roof", "wall"]
-        valid_vehicle_meta_list = ["canvas", "gear", "hull", "hatch", "loadershield", "mount", "muzzle", "turret", "wheel"]
+        valid_vehicle_meta_list = ["backbasket", "canvas", "gear", "hull", "hatch", "loadershield", "mount", "muzzle",
+                                   "turret", "suporte", "rc_mg_sensors", "wheel"]
         valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
         
         if True in map(lambda x: unknown_meta.startswith(x), valid_meta_list):
             print("# Reading", unknown_meta)
             f.read(0x60)
-            count, = struct.unpack("<I", f.read(4))
-            print("# Count", count)
-            if count == 0:
+            normal_count, = struct.unpack("<I", f.read(4))
+            print("# Count", normal_count)
+            if normal_count == 0:
                 f.read(0x68)
             else:
-                for i in range(0, count):
+                for i in range(0, normal_count):
                     length, = struct.unpack("<H", f.read(2))
                     unknown_meta2 = f.read(length).decode("ascii")
-                    print("Sub-meta", unknown_meta2)
-                    valid_sub_meta = ["commander", "eject", "gunner", "leader", "loader", "link", "muzzle",
+                    print("Sub-meta:", unknown_meta2)
+                    valid_sub_meta = ["commander", "eject", "exhaust", "gunner", "leader", "loader", "link", "muzzle",
                                       "firespot", "smoke", "weapon"]
                     print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                     if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
@@ -356,7 +365,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                         print("#Possible error0 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta2))
                         print("#End of sub-meta", "0x%x" % f.tell())
                         sys.exit(0)
-                special_meta_list = ["weapon", "base", "tripod", "launcher support", "mount", "hull", "turret"]
+                special_meta_list = ["weapon", "base", "tripod", "launcher support", "mount", "hull", "turret", "suporte"]
                 if True in map(lambda x: unknown_meta.startswith(x), special_meta_list):
                     f.read(0x68)
                 else:
@@ -369,15 +378,23 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
 
     unk, = struct.unpack("<I", f.read(4))
     print("# Read 4 bytes (always 0?)", unk)
+    if unk != 0:
+        error_message = "Unknown is not 0"
+        #raise ValueError(error_message)
+        print(error_message)
 
     name_length, = struct.unpack("<H", f.read(2))
     texture_name = f.read(name_length).decode("ascii")
-    print("# Texture name", texture_name)
+    print("# Texture name:", texture_name)
     if dump:
         mdr_obj.texture_name = texture_name
 
     unk, = struct.unpack("b", f.read(1))
     print("# Read unknown byte (always 2?):", unk)
+    if unk != 2:
+        error_message = "Unknown is not 2"
+        #raise ValueError(error_message)
+        print(error_message)
 
     print("# Start unknown section of 176 bytes", "0x%x" % f.tell())
     for i in range(0, int(0xB0/4)):
@@ -402,9 +419,9 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     ###############################################
     
     print("# Start vertex normals")
-    count, = struct.unpack("<I", f.read(4))
-    print("# Normals count", count/3) # 3 per vertex
-    for i in range(0, int(count/3)):
+    normal_count, = struct.unpack("<I", f.read(4))
+    print("# Normals count", normal_count/3) # 3 per vertex
+    for i in range(0, int(normal_count/3)):
         if not dump:
             f.read(6)
         else:
