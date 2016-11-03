@@ -432,15 +432,17 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                 print("# [%i] %i %i %i" % (i, nx, ny, nz))
             mdr_obj.vertex_normal_array.append((nx, ny, nz))
     print("# End normals", "0x%x" % f.tell())
-    print("# End model ##############################################################")
+    ###############################################
 
     unk, = struct.unpack("<I", f.read(4))
-    print("# Read 4 bytes, at end of model (always 0?)", unk)
+    print("# Parsing footer, count:", unk)
     if unk != 0:
-        for i in range(0, 128):
-            print(struct.unpack("<I", f.read(4)))
-        print("End 0x%x" % f.tell())
-        # raise ValueError("Unknown is not 0")
+        print(f.name)
+        for i in range(0, unk):
+            print(struct.unpack("<fff", f.read(12)))
+            length, = struct.unpack("<I", f.read(4))
+            f.read(length * 4)
+    print("# End model ##############################################################")
     f.read(1)
 
     if dump:
