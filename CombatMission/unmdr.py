@@ -247,87 +247,29 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             error_message = "Unknown is not 0"
             #raise ValueError(error_message)
             print(error_message)
-        #TODO object_type is probably really count for some metadata
-        object_type, = struct.unpack("<I", f.read(4))
-        print("# Read 4 bytes, object type?: ", object_type)
 
-        if object_type == 0: #TODO not object type, but count of meta data?
-            print( "# Object type 0, reading some metadata of size 0x68")
-            #print("%s, type 0, model_number=%i out of %i, %s" % (base_name, model_number, num_models, hex(f.tell())), file=logger)
-            manifest[u'material'] = []
-            length, = struct.unpack("<H", f.read(2))
-            meta0_offset = f.tell()
-            # first set of meta data is some kind of text, probably random garbage
-            print("# random garbage? ", "0x%x" % f.tell())
-            unk = f.read(48)
-            length, = struct.unpack("<H", f.read(2))
-            meta1_offset = f.tell()
-            meta1 = read_material(f)
-            if dump:
-                mdr_obj.material = meta1
-            manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
-            print("# Unknown float", struct.unpack("f", f.read(4)))
-            print("# end object type 0", "0x%x" % f.tell())
-        elif object_type == 1:
-            # This type seems to occur only in the first model.
-            print("# Object type 1, reading some metadata")
-            length, = struct.unpack("<H", f.read(2))
-            name = f.read(length) #TODO this is same as meta2 tags
-            print("# Meta data name", name)
-            #print("%s, type 1, model_number=%i out of %i, name=%s, %s" % (base_name, model_number, num_models, name, hex(f.tell())), file=logger)
-            manifest[u'material'] = []
-            manifest[u'type1'] = []
-            meta0_offset = f.tell()
-            meta0 = read_matrix(f)
-            manifest[u'type1'].append( ( {u'offset': meta0_offset}, meta0) )
-            length, = struct.unpack("<H", f.read(2))
-            meta1_offset = f.tell()
-            meta1 = read_matrix(f)
-            manifest[u'type1'].append( ( {u'offset': meta1_offset}, meta1) )
-            length, = struct.unpack("<H", f.read(2))
-            meta2_offset = f.tell()
-            meta2 = read_material(f)  #TODO needs to be tested
-            if dump:
-                mdr_obj.material = meta2
-            manifest[u'material'].append(({u'offset': meta2_offset}, meta2))
-            print("# Unknown float", struct.unpack("f", f.read(4)))
-            print("# End object type 1","0x%x" % f.tell())
-        elif object_type == 2:
-            print("# Object type 2")
-            name_length, = struct.unpack("<H", f.read(2))
-            model_class = f.read(name_length) #TODO this is same as meta2 tags
-            print("# Some meta?", model_class)
-            manifest[u'material'] = []
-            manifest[u'type2'] = []
-            meta0_offset = f.tell()
-            meta0 = read_matrix(f)
-            manifest[u'type2'].append(({u'offset': meta0_offset}, meta0))
-            name_length, = struct.unpack("<H", f.read(2))
-            model_class = f.read(name_length)
-            print("# Some meta?", model_class)
-            meta1_offset = f.tell()
-            meta1 = read_matrix(f)
-            manifest[u'type2'].append(({u'offset': meta1_offset}, meta1))
+        object_count, = struct.unpack("<I", f.read(4))
+        print("# Read 4 bytes, object type?: ", object_count)
 
-            print("# Start some unknown")
-            print("# Unknown", "0x%x" % struct.unpack("I", f.read(4)))
-            meta2_offset = f.tell()
-            meta2 = read_matrix(f)
-            manifest[u'type2'].append(({u'offset': meta2_offset}, meta2))
-            meta3_offset = f.tell()
-            meta3 = read_material(f) #TODO needs to be tested
-            if dump:
-                mdr_obj.material = meta3
-            manifest[u'material'].append(({u'offset': meta3_offset}, meta2))
-            print("# Unknown", "0x%x" % struct.unpack("I", f.read(4)))
-            print("#End unknown", "0x%x" % f.tell())
-        elif object_type >= 14:
-            for i in range(0, object_type):
-                name_length, = struct.unpack("<H", f.read(2))
-                print(f.read(name_length))
-                read_matrix(f)
-            f.read(0x68)
-            print("# End unknown", "0x%x" % f.tell())
+        for i in range(0, object_count):
+            name_length, = struct.unpack("<H", f.read(2))
+            print(i, f.read(name_length))
+            read_matrix(f)
+        manifest[u'material'] = []
+        length, = struct.unpack("<H", f.read(2))
+        meta0_offset = f.tell()
+        print("# random garbage? ", "0x%x" % f.tell())
+        unk = f.read(48)
+        length, = struct.unpack("<H", f.read(2))
+        meta1_offset = f.tell()
+        meta1 = read_material(f)
+        if dump:
+            mdr_obj.material = meta1
+        manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
+        print("# Unknown float", struct.unpack("f", f.read(4)))
+        print("# end object type 0", "0x%x" % f.tell())
+        # f.read(0x68)
+        print("# End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length).decode("ascii")
