@@ -33,6 +33,13 @@ def float2string(f):
 def short2float(value):
     return float(value + 2**15) / 2**15 - 1.0
 
+
+def print4x4matrix(matrix):
+    print("[")
+    for row in matrix:
+        print("[{0: .2f}, {1: .2f}, {2: .2f}, {3: .2f}]".format(row[0], row[1], row[2], row[3]))
+    print("]")
+
 ########
 # object:
 # face indices
@@ -132,7 +139,7 @@ def read_matrix(f):
             transform_matrix[j][i] = meta[i][j]
     transform_matrix[3][3] = 1.0
     print("# This is mostly likely this transform matrix:")
-    pprint(transform_matrix)
+    print4x4matrix(transform_matrix)
     print("# End metadata", "0x%x" % f.tell())
     return meta
 
