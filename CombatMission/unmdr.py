@@ -278,8 +278,9 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length).decode("ascii")
-        print("# unknown meta2:", unknown_meta)
-        f.read(0x60)
+        print("# unknown meta2:", unknown_meta, hex(f.tell()))
+        read_material(f)
+        read_material(f)
         meta_count, = struct.unpack("<I", f.read(4))
         print("# Count", meta_count)
         if meta_count == 0:
@@ -289,18 +290,10 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                 length, = struct.unpack("<H", f.read(2))
                 unknown_meta2 = f.read(length).decode("ascii")
                 print("Sub-meta:", unknown_meta2)
-                valid_sub_meta = ["commander", "eject", "exhaust", "gunner", "leader", "loader", "link", "muzzle",
-                                  "firespot", "smoke", "weapon"]
-                if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
+
+                if length != 0:
                     read_matrix(f)
-                    print("#End of sub-meta", "0x%x" % f.tell())
-                elif length == 0:
-                    print("#End of sub-meta", "0x%x" % f.tell())
-                else:
-                    read_matrix(f)
-                    print("#Possible error0 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta2))
-                    print("#End of sub-meta", "0x%x" % f.tell())
-                    sys.exit(0)
+                print("#End of sub-meta", "0x%x" % f.tell())
             f.read(0x68)
         print("# Unknown meta finished", "0x%x" % f.tell())
 
