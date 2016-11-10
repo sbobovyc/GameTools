@@ -202,7 +202,6 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             print("# [%i] %f" % (i, unk))
     print("# Finished unknown section", "0x%x" % f.tell())
 
-
     ###############################################
     print("# Start face vertex indices")
     face_count, = struct.unpack("<I", f.read(4))
@@ -256,54 +255,42 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             print(error_message)
 
         object_count, = struct.unpack("<I", f.read(4))
-        print("# Read 4 bytes, object type?: ", object_count)
+        print("# Read 4 bytes, object count: ", object_count)
 
         for i in range(0, object_count):
             name_length, = struct.unpack("<H", f.read(2))
-            print(i, f.read(name_length))
+            print("Anchor point %i: %s" % (i, f.read(name_length)))
             read_matrix(f)
         manifest[u'material'] = []
-        length, = struct.unpack("<H", f.read(2))
-        meta0_offset = f.tell()
+        f.read(2) # always 0
         print("# random garbage? ", "0x%x" % f.tell())
-        unk = f.read(48)
-        length, = struct.unpack("<H", f.read(2))
+        unk = struct.unpack("f"*12, f.read(48))
+        print("# unknown", unk)
+        f.read(2)  # always 0
         meta1_offset = f.tell()
         meta1 = read_material(f)
         if dump:
             mdr_obj.material = meta1
         manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
         print("# Unknown float", struct.unpack("f", f.read(4)))
-        print("# end object type 0", "0x%x" % f.tell())
-        # f.read(0x68)
+        print("# End list of anchor points", "0x%x" % f.tell())
         print("# End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
         unknown_meta = f.read(length).decode("ascii")
         print("# unknown meta2:", unknown_meta)
-        valid_weapon_meta_list = ["weapon", "tripod", "base", "clip", "mortar", "missile", "grenade", "day sight",
-                                  "m1a2", "m203", "m320", "day", "cylinder01", "ammo", "bogus-weapon", "periscope_circle",
-                                  "mgbracket", "crows_structure", "launcher support"]
-        valid_building_meta_list = ["junkdebris", "level", "roof", "wall"]
-        valid_vehicle_meta_list = ["backbasket", "canvas", "gear", "hull", "hatch", "loadershield", "mount", "muzzle",
-                                   "turret", "suporte", "rc_mg_sensors", "wheel"]
-        valid_meta_list = valid_weapon_meta_list + valid_building_meta_list + valid_vehicle_meta_list
-        
-        # if True in map(lambda x: unknown_meta.startswith(x), valid_meta_list):
-        print("# Reading", unknown_meta)
         f.read(0x60)
-        normal_count, = struct.unpack("<I", f.read(4))
-        print("# Count", normal_count)
-        if normal_count == 0:
+        meta_count, = struct.unpack("<I", f.read(4))
+        print("# Count", meta_count)
+        if meta_count == 0:
             f.read(0x68)
         else:
-            for i in range(0, normal_count):
+            for i in range(0, meta_count):
                 length, = struct.unpack("<H", f.read(2))
                 unknown_meta2 = f.read(length).decode("ascii")
                 print("Sub-meta:", unknown_meta2)
                 valid_sub_meta = ["commander", "eject", "exhaust", "gunner", "leader", "loader", "link", "muzzle",
                                   "firespot", "smoke", "weapon"]
-                print(map(lambda x: unknown_meta2.startswith(x), valid_sub_meta))
                 if True in map(lambda x: unknown_meta2.startswith(x), valid_sub_meta):
                     read_matrix(f)
                     print("#End of sub-meta", "0x%x" % f.tell())
@@ -314,15 +301,7 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
                     print("#Possible error0 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta2))
                     print("#End of sub-meta", "0x%x" % f.tell())
                     sys.exit(0)
-            #special_meta_list = ["weapon", "base", "tripod", "launcher support", "mount", "hull", "turret", "suporte"]
-            #if True in map(lambda x: unknown_meta.startswith(x), special_meta_list):
             f.read(0x68)
-            # else:
-            # print("# Possible error1 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
-            # sys.exit(0)
-        # else:
-        #     print("#Possible error2 in %s! (%s) Report about it on the forum." % (f.name, unknown_meta))
-        #     sys.exit(0)
         print("# Unknown meta finished", "0x%x" % f.tell())
 
     unk, = struct.unpack("<I", f.read(4))
