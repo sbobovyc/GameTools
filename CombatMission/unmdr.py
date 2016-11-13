@@ -125,7 +125,7 @@ class MDR_Object:
     
 
 def read_matrix(f):
-    print("# Start reading metadata", "0x%x" % f.tell())
+    print("# Start reading matrix", "0x%x" % f.tell())
     meta = [3*[0] for i in range(4)]
     for i in range(0, 4):
         for j in range(0, 3):
@@ -167,8 +167,8 @@ def read_material(f):
     return material
 
 
-def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verbose=False):
-    print("# Start model", "0x%x" % f.tell(), "##############################################################")
+def dump_model(base_name, num_models, f, model_number, outdir, dump=True, verbose=False):
+    print("# Start model %i" % model_number, "at 0x%x" % f.tell(), "##############################################################")
     name_length, = struct.unpack("<H", f.read(2))
     print("# submodel name length:", name_length)
     submodel_name = f.read(name_length).decode("ascii")
@@ -237,22 +237,19 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
 
     print("# Start unknown section 1")
     unk, = struct.unpack("<I", f.read(4))
-    print("# Unknown", "0x%x" % unk)
+    print("# Unknown 0x%x" % unk, "at 0x%x" % f.tell())
 
     if model_number == 0:
-        print("# Some matrix?")
-        for i in range(0, int(0x30/4)):
-            unk1,unk2 = struct.unpack("ff", f.read(8))
-            if verbose:
-                print("# [%i] %f, %f" % (i, unk1, unk2))
+        read_material(f)
+        read_material(f)
         
         print("# End unknown section", "0x%x" % f.tell())
         unk, = struct.unpack("<I", f.read(4))
         print("# Read 4 bytes (always 0?)", unk)
         if unk != 0:
             error_message = "Unknown is not 0"
-            #raise ValueError(error_message)
-            print(error_message)
+            raise ValueError(error_message)
+            # print(error_message)
 
         object_count, = struct.unpack("<I", f.read(4))
         print("# Read 4 bytes, object count: ", object_count)
@@ -261,40 +258,38 @@ def dump_model(base_name, num_models, f, model_number, outdir, dump = True, verb
             name_length, = struct.unpack("<H", f.read(2))
             print("Anchor point %i: %s" % (i, f.read(name_length)))
             read_matrix(f)
-        manifest[u'material'] = []
         f.read(2) # always 0
         print("# random garbage? ", "0x%x" % f.tell())
-        unk = struct.unpack("f"*12, f.read(48))
+        # unk = struct.unpack("f"*12, f.read(48))
+        read_material(f)
         print("# unknown", unk)
         f.read(2)  # always 0
         meta1_offset = f.tell()
         meta1 = read_material(f)
         if dump:
             mdr_obj.material = meta1
+        manifest[u'material'] = []
         manifest[u'material'].append( ( {u'offset': meta1_offset}, meta1) )
         print("# Unknown float", struct.unpack("f", f.read(4)))
         print("# End list of anchor points", "0x%x" % f.tell())
         print("# End unknown", "0x%x" % f.tell())
     else:
         length, = struct.unpack("<xxH", f.read(4))
-        unknown_meta = f.read(length).decode("ascii")
-        print("# unknown meta2:", unknown_meta, hex(f.tell()))
+        parent_name = f.read(length).decode("ascii")
+        print("# parent name:", parent_name, hex(f.tell()))
         read_material(f)
         read_material(f)
-        meta_count, = struct.unpack("<I", f.read(4))
-        print("# Count", meta_count)
-        if meta_count == 0:
-            f.read(0x68)
-        else:
-            for i in range(0, meta_count):
-                length, = struct.unpack("<H", f.read(2))
-                unknown_meta2 = f.read(length).decode("ascii")
-                print("Sub-meta:", unknown_meta2)
-
-                if length != 0:
-                    read_matrix(f)
-                print("#End of sub-meta", "0x%x" % f.tell())
-            f.read(0x68)
+        memory_point_count, = struct.unpack("<I", f.read(4))
+        print("# Memory point count", memory_point_count)
+        for i in range(0, memory_point_count):
+            length, = struct.unpack("<H", f.read(2))
+            memory_point_name = f.read(length).decode("ascii")
+            print("# Memory point name:", memory_point_name)
+            if length != 0:
+                read_matrix(f)
+            print("#End of sub-meta", "0x%x" % f.tell())
+        for i in range(int(0x68/4)):
+            print(struct.unpack("f", f.read(4)))
         print("# Unknown meta finished", "0x%x" % f.tell())
 
     unk, = struct.unpack("<I", f.read(4))
