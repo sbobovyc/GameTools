@@ -32,14 +32,10 @@ from collections import OrderedDict
 bl_info = {
     "name": "PIX CSV",
     "author": "Stanislav Bobovych",
-    "version": (1, 0),
-    "blender": (2, 6, 6),
+    "version": (1, 0, 0),
+    "blender": (2, 7, 8),
     "location": "File > Import-Export",
     "description": "Import PIX csv dump of mesh. Import mesh, normals and UVs.",
-    "warning": "",
-    "wiki_url": "",
-    "tracker_url": "",
-    "support": 'TESTING',
     "category": "Import"}
 
 
