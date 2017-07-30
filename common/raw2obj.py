@@ -28,6 +28,7 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('file', nargs='?', help='Raw file')
     parser.add_argument('--type', required=True, choices=['indices', 'positions', 'texcoords'])
+    parser.add_argument('--mode', default='GL_TRIANGLES', required=False, choices=['GL_TRIANGLE_STRIP', 'GL_TRIANGLES'], help='Draw elements mode(Only for html)')
     parser.add_argument('-o', '--offset', default="0x0", help='Offset into file, in hex')
     parser.add_argument('-c', '--count', type=int, default=sys.maxsize, help='Number of vertices')
 
@@ -77,17 +78,22 @@ if __name__ == '__main__':
         df = pd.read_html(path, header=None)[0]
         print("#", df.shape)
         if args.type == "indices":
-            for i, row in df.iterrows():
-                if i < 2:
-                    pass
-                else:
-                    v0,v1,v2 = (df[1][i-2]+1, df[1][i-1]+1, df[1][i]+1)
-                    if v0 == v1 or v1 == v2 or v0 == v2:
+            if args.mode == "GL_TRIANGLE_STRIP":
+                for i, row in df.iterrows():
+                    if i < 2:
                         pass
-                    if i % 2:
-                        print("f %i %i %i" % (v2,v1,v0))
                     else:
-                        print("f %i %i %i" % (v0,v1,v2))
+                        v0,v1,v2 = (df[1][i-2]+1, df[1][i-1]+1, df[1][i]+1)
+                        if v0 == v1 or v1 == v2 or v0 == v2:
+                            pass
+                        if i % 2:
+                            print("f %i %i %i" % (v2,v1,v0))
+                        else:
+                            print("f %i %i %i" % (v0,v1,v2))
+            elif args.mode == "GL_TRIANGLES":
+                for i in range(0, df.shape[0], 3):
+                    v0,v1,v2 = (df[1][i]+1, df[1][i+1]+1, df[1][i+2]+1)
+                    print("f %i %i %i" % (v0,v1,v2))
         elif args.type == "positions":            
             for i, row in df.iterrows():
                 print("v %f %f %f" % (row[1], row[2], row[3]))
