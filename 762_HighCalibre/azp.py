@@ -185,7 +185,7 @@ if __name__ == '__main__':
         current_data_offset = 16 + header_total_size
 
         # create header
-        with open("out.bin", "wb") as f:
+        with open(os.path.basename(args.filepath)+".azp", "wb") as f:
             f.write(struct.pack("3sbIII", "AZP".encode("ascii"), 0x1, current_data_offset, 0x6, len(header)))
 
             # create table of contents
