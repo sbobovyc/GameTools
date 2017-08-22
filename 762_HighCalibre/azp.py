@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
                 ciphered_data = f.read(filename_length)
                 clear_data, next_key = symmetric_cipher(ciphered_data, filename_length, next_key)
-                filename = clear_data.decode("ascii")
+                filename = clear_data.decode("latin-1")
                 if args.verbose:
                     print("File name:", filename)
 
@@ -196,7 +196,7 @@ if __name__ == '__main__':
                 ciphered_data, next_key = symmetric_cipher(clear_data, len(clear_data), next_key)
                 f.write(ciphered_data)
 
-                clear_data = struct.pack("%is" % len(entry.name), entry.name.encode("ascii"))
+                clear_data = struct.pack("%is" % len(entry.name), entry.name.encode("latin-1"))
                 ciphered_data, next_key = symmetric_cipher(clear_data, len(clear_data), next_key)
                 f.write(ciphered_data)
 
