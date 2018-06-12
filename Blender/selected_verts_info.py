@@ -24,6 +24,7 @@ if bpy.context.object.type == "MESH":
     selected_verts = [v for v in mesh.vertices if v.select]
     for v in selected_verts:
         print("Vertex index: %i," % v.index, "Coordinate:", v.co)
+        print("\t\t Normal:", v.normal)
         for g in v.groups:
             print("\tGroup: %i," % g.group, object.vertex_groups[g.group].name, "Weight:", g.weight)
             
