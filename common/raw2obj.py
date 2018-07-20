@@ -19,8 +19,12 @@ import argparse
 import sys
 import struct
 import os
+import ast
 import pandas as pd
 import numpy as np
+
+VERTEX_FORMAT = "v %f %f %f"
+INDEX_FORMAT = "f %i %i %i"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -28,7 +32,11 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('file', nargs='?', help='Raw file')
     parser.add_argument('--type', required=True, choices=['indices', 'positions', 'texcoords'])
-    parser.add_argument('--mode', default='GL_TRIANGLES', required=False, choices=['GL_TRIANGLE_STRIP', 'GL_TRIANGLES'], help='Draw elements mode(Only for html)')
+    parser.add_argument('--mode', default='TRIANGLES', required=False, choices=['TRIANGLE_STRIP', 'TRIANGLES'], help='Draw elements mode')
+    parser.add_argument('--order', default='CCW', choices=['CCW', 'CW'], help='Ordering of front facing faces')
+    parser.add_argument('--csv_header',
+                        default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_x\':15}',
+                        help="CSV column mapping {column_name: column_number")
     parser.add_argument('-o', '--offset', default="0x0", help='Offset into file, in hex')
     parser.add_argument('-c', '--count', type=int, default=sys.maxsize, help='Number of vertices')
 
@@ -36,7 +44,7 @@ if __name__ == '__main__':
     path = args.file
     extension = os.path.splitext(path)[1][1:].strip()
 
-    if extension != "html":
+    if extension == "bin":
         offset = int(args.offset, 16)
         count = args.count
         if count != sys.maxsize:
@@ -74,11 +82,67 @@ if __name__ == '__main__':
                     byte_count += 2 * 4
 
         print("# number of bytes", byte_count)
-    else:
+    elif extension == "csv":
+        df = pd.read_csv(args.file)
+        csv_header = ast.literal_eval(args.csv_header)
+
+        faces = {}
+        vertices = {}
+        f = 0
+        if args.mode == "TRIANGLE_STRIP":
+            for i, row in df.iterrows():
+                if i < 2:
+                    pass
+                else:
+                    idx0 = int(df.iloc[i - 2, csv_header['vertex_index']])
+                    idx1 = int(df.iloc[i - 1, csv_header['vertex_index']])
+                    idx2 = int(df.iloc[i, csv_header['vertex_index']])
+
+                    x, y, z = df.iloc[i-2, csv_header['position_x']:csv_header['position_z']+1]
+                    vertices[idx0] = [x, y, z]
+                    x, y, z = df.iloc[i-1, csv_header['position_x']:csv_header['position_z']+1]
+                    vertices[idx1] = [x, y, z]
+                    x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
+                    vertices[idx2] = [x, y, z]
+
+                    if args.order == 'CCW':
+                        if i % 2:
+                            faces[f] = [idx2, idx1, idx0]
+                            f += 1
+                        else:
+                            faces[f] = [idx0, idx1, idx2]
+                            f += 1
+                    else:
+                        if i % 2:
+                            faces[f] = [idx0, idx1, idx2]
+                            f += 1
+                        else:
+                            faces[f] = [idx2, idx1, idx0]
+                            f += 1
+        elif args.mode == "TRIANGLES":
+            for i in range(0, df.shape[0], 3):
+                idx0 = int(df.iloc[i, csv_header['vertex_index']])
+                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
+                vertices[idx0] = [x,y,z]
+                i += 1
+                idx1 = int(df.iloc[i, csv_header['vertex_index']])
+                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
+                vertices[idx1] = [x, y, z]
+                i += 1
+                idx2 = int(df.iloc[i, csv_header['vertex_index']])
+                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
+                vertices[idx2] = [x, y, z]
+                faces[f] = [idx0, idx1, idx2]
+                f += 1
+        for key, value in faces.items():
+            print(INDEX_FORMAT % (value[0]+1, value[1]+1, value[2]+1))  # wavefront obj index starts at 1
+        for key, value in vertices.items():
+            print(VERTEX_FORMAT % (value[0], value[1], value[2]))
+    elif extension == "html":
         df = pd.read_html(path, header=None)[0]
         print("#", df.shape)
         if args.type == "indices":
-            if args.mode == "GL_TRIANGLE_STRIP":
+            if args.mode == "TRIANGLE_STRIP":
                 for i, row in df.iterrows():
                     if i < 2:
                         pass
@@ -90,11 +154,10 @@ if __name__ == '__main__':
                             print("f %i %i %i" % (v2,v1,v0))
                         else:
                             print("f %i %i %i" % (v0,v1,v2))
-            elif args.mode == "GL_TRIANGLES":
+            elif args.mode == "TRIANGLES":
                 for i in range(0, df.shape[0], 3):
                     v0,v1,v2 = (df[1][i]+1, df[1][i+1]+1, df[1][i+2]+1)
                     print("f %i %i %i" % (v0,v1,v2))
         elif args.type == "positions":            
             for i, row in df.iterrows():
                 print("v %f %f %f" % (row[1], row[2], row[3]))
-        
