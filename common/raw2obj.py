@@ -32,6 +32,7 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('file', nargs='?', help='Raw file')
     parser.add_argument('--type', required=True, choices=['indices', 'positions', 'texcoords'])
+    parser.add_argument('--input-type', choices=['bin', 'csv', 'html'])
     parser.add_argument('--mode', default='TRIANGLES', required=False, choices=['TRIANGLE_STRIP', 'TRIANGLES'], help='Draw elements mode')
     parser.add_argument('--order', default='CCW', choices=['CCW', 'CW'], help='Ordering of front facing faces')
     parser.add_argument('--csv_header',
@@ -42,7 +43,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     path = args.file
-    extension = os.path.splitext(path)[1][1:].strip()
+    if args.input_type == None:
+        extension = os.path.splitext(path)[1][1:].strip()
+    else:
+        extension = args.input_type
 
     if extension == "bin":
         offset = int(args.offset, 16)
