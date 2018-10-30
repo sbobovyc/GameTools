@@ -18,7 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import os
 import re
-from pylab import *
+import matplotlib.pyplot as plt
 import sys
 
 parser = argparse.ArgumentParser(description='Tool that recursively scans directories and visualizes file sizes.', \
@@ -39,28 +39,31 @@ ext_dict = {}
 for root, dir, files in os.walk(path):
     if re.search(filt, root) == None or args.filt == '':
         for f in files:
+            fpath = os.path.join(root,f)
+            fsize = os.path.getsize(fpath)
             if not args.ext_only:
-                fpath = os.path.join(root,f)
+
                 num_files += 1
-                fsize = os.path.getsize(fpath)
                 total_size += fsize
                 file_dict[fpath] = fsize
 
             ext = os.path.splitext(f)[1]
-            if ext_dict.has_key(ext):
-                ext_dict[ext] = ext_dict[ext] + 1
+            if ext in ext_dict:
+                ext_dict[ext] = [ext_dict[ext][0] + 1, ext_dict[ext][1] + fsize]
             else:
-                ext_dict[ext] = 1
+                ext_dict[ext] = (1, fsize)
 
-print ext_dict
+for key,item in ext_dict.items():
+    print("{0:10}\t{1:10}\t{2:10}".format(key, item[0], int(item[1]/item[0])))
+
 if not args.ext_only:    
     files_counts = sorted(file_dict.items(), key=lambda x:x[1], reverse=True)     # list of tuples (path, size)
     paths,sizes = zip(*files_counts)
 
     # plotting
-    labels = map(lambda x: os.path.basename(x), paths)
-    figure(1, figsize=(6,6))
-    ax = axes([0.1, 0.1, 0.8, 0.8])
-    pie(sizes, labels=labels)
-    title("Directory: %s, file count: %s, total size(mb): %s" % (path, num_files, total_size/1024))
-    show()
+    labels = list(map(lambda x: os.path.basename(x), paths))
+    plt.figure(1, figsize=(6,6))
+    plt.ax = plt.axes([0.1, 0.1, 0.8, 0.8])
+    plt.pie(sizes, labels=labels)
+    plt.title("Directory: %s, file count: %s, total size(mb): %s" % (path, num_files, total_size/1024))
+    plt.show()
