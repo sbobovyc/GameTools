@@ -62,7 +62,10 @@ if __name__ == '__main__':
         count = args.count
         if count != sys.maxsize:
             if args.type == "indices":
-                count = args.count * 3 * 2
+                if args.format == 'UNSIGNED_INT':
+                    count = args.count * 3 * 4
+                else:
+                    count = args.count * 3 * 2
             elif args.type == "positions":
                 count = args.count * 3 * 4
             elif args.type == "texcoords":
@@ -103,7 +106,6 @@ if __name__ == '__main__':
                             break
                     elif args.mode == "TRIANGLES":
                         faces[i] = [idx0, idx1, idx2]
-                    print(f.tell())
                     byte_count += data_size
                     i += 1
                 elif args.type == "positions":
