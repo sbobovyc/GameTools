@@ -25,6 +25,7 @@ import numpy as np
 
 VERTEX_FORMAT = "v %f %f %f"
 INDEX_FORMAT = "f %i %i %i"
+INDEX_FORMAT2 = "f %i/%i %i/%i %i/%i"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -38,15 +39,23 @@ if __name__ == '__main__':
     parser.add_argument('--csv_header',
                         default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_x\':15}',
                         help="CSV column mapping {column_name: column_number")
-    parser.add_argument('-o', '--offset', default="0x0", help='Offset into file, in hex')
+    parser.add_argument('-o', '--offset', default="0x0", help='Offset into binary file, in hex')
+    parser.add_argument('-f', '--format', default="UNSIGNED_SHORT", choices=['UNSIGNED_SHORT', 'UNSIGNED_INT'], help='Format of binary data')
+    parser.add_argument('-s', '--stride', type=int, default=0, help='Stride of binary')
     parser.add_argument('-c', '--count', type=int, default=sys.maxsize, help='Number of vertices')
 
     args = parser.parse_args()
     path = args.file
-    if args.input_type == None:
+
+    if args.input_type is None:
         extension = os.path.splitext(path)[1][1:].strip()
     else:
         extension = args.input_type
+
+    faces = {}
+    vertices = {}
+    indices = {}
+    face = 0
 
     if extension == "bin":
         offset = int(args.offset, 16)
@@ -61,22 +70,51 @@ if __name__ == '__main__':
 
         byte_count = 0
         with open(path, 'rb') as f:
+            f.seek(0, 2)
+            file_size = f.tell()
             f.seek(offset)
+            i = 0
             while byte_count < count:
                 if args.type == "indices":
-                    buf = f.read(3 * 2)  # assume vertex indices are unsigned shorts
+                    data_size = 3 * 2   # assume vertex indices are unsigned shorts
+                    data_format = 'H'*3
+                    if args.format == 'UNSIGNED_INT':  # else unsigned int
+                        data_size = 3 * 4
+                        data_format = 'I'*3
+                    buf = f.read(data_size)
                     if not buf:
                         break
-                    v1, v2, v3 = struct.unpack("HHH", buf)
-                    print("f %i/%i %i/%i %i/%i" % (v1+1, v1+1, v2+1, v2+1, v3+1, v3+1))
-                    byte_count += 3 * 2
+                    idx0, idx1, idx2 = struct.unpack(data_format, buf)
+                    faces[i] = [idx0, idx1, idx2]
+                    if args.mode == "TRIANGLE_STRIP":
+                        if args.order == 'CCW':
+                            if i % 2:
+                                faces[i] = [idx2, idx1, idx0]
+                            else:
+                                faces[i] = [idx0, idx1, idx2]
+                        else:
+                            if i % 2:
+                                faces[i] = [idx0, idx1, idx2]
+                            else:
+                                faces[i] = [idx2, idx1, idx0]
+
+                        f.seek(f.tell() - int(2*(data_size/3)))
+                        if f.tell() + 2*(data_size/3) == file_size:
+                            break
+                    elif args.mode == "TRIANGLES":
+                        faces[i] = [idx0, idx1, idx2]
+                    print(f.tell())
+                    byte_count += data_size
+                    i += 1
                 elif args.type == "positions":
-                    buf = f.read(3 * 4)
+                    buf = f.read(3 * 4)  # assume vertex positions are floats
                     if not buf:
                         break
                     f1, f2, f3 = struct.unpack("fff", buf)
-                    print("v", f1, f2, f3)
+                    print(VERTEX_FORMAT % (f1, f2, f3))
                     byte_count += 3 * 4
+                    # apply stride
+                    f.seek(f.tell() + args.stride - 3*4)
                 elif args.type == 'texcoords':
                     buf = f.read(2 * 4)  # assume texture coordinates are floats
                     if not buf:
@@ -84,15 +122,15 @@ if __name__ == '__main__':
                     u, v, = struct.unpack("ff", buf)
                     print("vt", u, v)
                     byte_count += 2 * 4
+                    # apply stride
+                    f.seek(f.tell() + args.stride - 2*4)
+            for key, value in faces.items():
+                print(INDEX_FORMAT2 % (value[0] + 1, value[0] + 1, value[1] + 1, value[1] + 1, value[2] + 1, value[2] + 1))  # wavefront obj index starts at 1
 
         print("# number of bytes", byte_count)
     elif extension == "csv":
         df = pd.read_csv(args.file)
         csv_header = ast.literal_eval(args.csv_header)
-
-        faces = {}
-        vertices = {}
-        f = 0
         if args.mode == "TRIANGLE_STRIP":
             for i, row in df.iterrows():
                 if i < 2:
