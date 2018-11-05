@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--offset', default="0x0", help='Offset into binary file, in hex')
     parser.add_argument('-f', '--format', default="UNSIGNED_SHORT", choices=['UNSIGNED_SHORT', 'UNSIGNED_INT'], help='Format of binary data')
     parser.add_argument('-s', '--stride', type=int, default=0, help='Stride of binary')
+    parser.add_argument('--skip', type=int, default=0, help='Skip n bytes')
     parser.add_argument('-c', '--count', type=int, default=sys.maxsize, help='Number of vertices')
 
     args = parser.parse_args()
@@ -118,17 +119,17 @@ if __name__ == '__main__':
                     # apply stride
                     f.seek(f.tell() + args.stride - 3*4)
                 elif args.type == 'texcoords':
+                    next_read_address = f.tell() + args.stride
+                    f.read(args.skip)
                     buf = f.read(2 * 4)  # assume texture coordinates are floats
                     if not buf:
                         break
                     u, v, = struct.unpack("ff", buf)
                     print("vt", u, v)
                     byte_count += 2 * 4
-                    # apply stride
-                    f.seek(f.tell() + args.stride - 2*4)
+                    f.seek(next_read_address)
             for key, value in faces.items():
                 print(INDEX_FORMAT2 % (value[0] + 1, value[0] + 1, value[1] + 1, value[1] + 1, value[2] + 1, value[2] + 1))  # wavefront obj index starts at 1
-
         print("# number of bytes", byte_count)
     elif extension == "csv":
         df = pd.read_csv(args.file)
