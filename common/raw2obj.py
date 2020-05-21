@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='TRIANGLES', required=False, choices=['TRIANGLE_STRIP', 'TRIANGLES'], help='Draw elements mode')
     parser.add_argument('--order', default='CCW', choices=['CCW', 'CW'], help='Ordering of front facing faces')
     parser.add_argument('--csv_header',
-                        default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_x\':15}',
+                        default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_y\':15}',
                         help="CSV column mapping {column_name: column_number")
     parser.add_argument('-o', '--offset', default="0x0", help='Offset into binary file, in hex')
     parser.add_argument('-f', '--format', default="UNSIGNED_SHORT", choices=['UNSIGNED_SHORT', 'UNSIGNED_INT'], help='Format of binary data')
@@ -152,18 +152,18 @@ if __name__ == '__main__':
 
                     if args.order == 'CCW':
                         if i % 2:
-                            faces[f] = [idx2, idx1, idx0]
-                            f += 1
+                            faces[face] = [idx2, idx1, idx0]
+                            face += 1
                         else:
-                            faces[f] = [idx0, idx1, idx2]
-                            f += 1
+                            faces[face] = [idx0, idx1, idx2]
+                            face += 1
                     else:
                         if i % 2:
-                            faces[f] = [idx0, idx1, idx2]
-                            f += 1
+                            faces[face] = [idx0, idx1, idx2]
+                            face += 1
                         else:
-                            faces[f] = [idx2, idx1, idx0]
-                            f += 1
+                            faces[face] = [idx2, idx1, idx0]
+                            face += 1
         elif args.mode == "TRIANGLES":
             for i in range(0, df.shape[0], 3):
                 idx0 = int(df.iloc[i, csv_header['vertex_index']])
@@ -177,8 +177,8 @@ if __name__ == '__main__':
                 idx2 = int(df.iloc[i, csv_header['vertex_index']])
                 x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
                 vertices[idx2] = [x, y, z]
-                faces[f] = [idx0, idx1, idx2]
-                f += 1
+                faces[face] = [idx0, idx1, idx2]
+                face += 1
         for key, value in faces.items():
             print(INDEX_FORMAT % (value[0]+1, value[1]+1, value[2]+1))  # wavefront obj index starts at 1
         for key, value in vertices.items():
