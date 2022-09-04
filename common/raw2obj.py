@@ -16,60 +16,113 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import argparse
-import sys
-import struct
-import os
 import ast
+import os
+import struct
+import sys
 import pandas as pd
-import numpy as np
+from enum import Enum
+
+
+class InputType(Enum):
+    bin = 'bin'
+    csv = 'csv'
+    html = 'html'
+
+
+class DataType(Enum):
+    indices = 'indices'
+    positions = 'positions'
+    texcoords = 'texcoords'
+
+
+class DrawElementsMode(Enum):
+    TRIANGLE_STRIP = 'TRIANGLE_STRIP'
+    TRIANGLES = 'TRIANGLES'
+
+
+class BinaryFormat(Enum):
+    UNSIGNED_SHORT = 'UNSIGNED_SHORT'
+    UNSIGNED_INT = 'UNSIGNED_INT'
+
+
+class FaceOrder(Enum):
+    CCW = 'CCW'
+    CW = 'CW'
+
 
 VERTEX_FORMAT = "v %f %f %f"
 INDEX_FORMAT = "f %i %i %i"
 INDEX_FORMAT2 = "f %i/%i %i/%i %i/%i"
+TEXTURE_COORDS = "vt %f %f"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Tool that\'s used to read raw data dumps or html tables of vertex data and print wavefront obj vertices.',
+        description='Tool that\'s used to read raw data dumps, CSV or HTML tables of vertex data and print Wavefront obj.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('file', nargs='?', help='Raw file')
-    parser.add_argument('--type', required=True, choices=['indices', 'positions', 'texcoords'])
-    parser.add_argument('--input-type', choices=['bin', 'csv', 'html'])
-    parser.add_argument('--mode', default='TRIANGLES', required=False, choices=['TRIANGLE_STRIP', 'TRIANGLES'], help='Draw elements mode')
-    parser.add_argument('--order', default='CCW', choices=['CCW', 'CW'], help='Ordering of front facing faces')
-    parser.add_argument('--csv_header',
-                        default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_y\':15}',
-                        help="CSV column mapping {column_name: column_number")
-    parser.add_argument('-o', '--offset', default="0x0", help='Offset into binary file, in hex')
-    parser.add_argument('-f', '--format', default="UNSIGNED_SHORT", choices=['UNSIGNED_SHORT', 'UNSIGNED_INT'], help='Format of binary data')
-    parser.add_argument('-s', '--stride', type=int, default=0, help='Stride of binary')
-    parser.add_argument('--skip', type=int, default=0, help='Skip n bytes')
-    parser.add_argument('-c', '--count', type=int, default=sys.maxsize, help='Number of vertices')
+    parser.add_argument('file', nargs='?', help='Input file')
+    parser.add_argument('--type', choices=[DataType.indices.value, DataType.positions.value,
+                                           DataType.texcoords.value])
+    parser.add_argument('--input-type',
+                        choices=[InputType.bin.value, InputType.csv.value, InputType.html.value])
+    parser.add_argument('--mode', default=DrawElementsMode.TRIANGLES.value, required=False,
+                        choices=[DrawElementsMode.TRIANGLE_STRIP.value,
+                                 DrawElementsMode.TRIANGLES.value], help='Draw elements mode')
+    parser.add_argument('--order', default=FaceOrder.CCW.value,
+                        choices=[FaceOrder.CCW.value, FaceOrder.CW.value],
+                        help='Ordering of front facing faces')
+
+    bin_group = parser.add_argument_group("bin options")
+    bin_group.add_argument('-o', '--offset', default="0x0", help='Offset into binary file, in hex')
+    bin_group.add_argument('-s', '--stride', type=int, default=0, help='Stride of binary')
+    bin_group.add_argument('-c', '--count', type=int, default=sys.maxsize,
+                           help='Number of vertices')
+    bin_group.add_argument('--skip', type=int, default=0, help='Skip n bytes')
+    bin_group.add_argument('-f', '--format', default=BinaryFormat.UNSIGNED_SHORT.value,
+                           choices=[BinaryFormat.UNSIGNED_SHORT.value,
+                                    BinaryFormat.UNSIGNED_INT.value], help='Format of binary data')
+
+    csv_group = parser.add_argument_group("csv options")
+    csv_group.add_argument('--csv_header',
+                           default='{\'vertex_index\':1, \'position_x\':2, \'position_y\':3, \'position_z\':4, \'texcoord_x\':14, \'texcoord_y\':15}',
+                           help="CSV column mapping {\'column_name\': column_number}")
 
     args = parser.parse_args()
     path = args.file
 
     if args.input_type is None:
-        extension = os.path.splitext(path)[1][1:].strip()
+        input_type = InputType[os.path.splitext(path)[1][1:].strip()]
     else:
-        extension = args.input_type
+        input_type = InputType[args.input_type]
+
+    if input_type == InputType.bin or input_type == InputType.html:
+        if args.type is not None:
+            data_type = DataType[args.type]
+        else:
+            print("For bin or html, you must supply input data type (--type)")
+            sys.exit(-1)
 
     faces = {}
     vertices = {}
     indices = {}
+    texture_coords = {}
     face = 0
+    binary_format = BinaryFormat[args.format]
+    mode = DrawElementsMode[args.mode]
+    face_order = FaceOrder[args.order]
 
-    if extension == "bin":
+    if input_type == InputType.bin:
         offset = int(args.offset, 16)
         count = args.count
         if count != sys.maxsize:
-            if args.type == "indices":
-                if args.format == 'UNSIGNED_INT':
+            if data_type == DataType.indices:
+                if binary_format == BinaryFormat.UNSIGNED_INT:
                     count = args.count * 3 * 4
                 else:
                     count = args.count * 3 * 2
-            elif args.type == "positions":
+            elif data_type == DataType.positions:
                 count = args.count * 3 * 4
-            elif args.type == "texcoords":
+            elif data_type == DataType.texcoords:
                 count = args.count * 2 * 4
 
         byte_count = 0
@@ -79,19 +132,19 @@ if __name__ == '__main__':
             f.seek(offset)
             i = 0
             while byte_count < count:
-                if args.type == "indices":
-                    data_size = 3 * 2   # assume vertex indices are unsigned shorts
-                    data_format = 'H'*3
-                    if args.format == 'UNSIGNED_INT':  # else unsigned int
+                if data_type == DataType.indices:
+                    data_size = 3 * 2  # assume vertex indices are unsigned shorts
+                    data_format = 'H' * 3
+                    if binary_format == BinaryFormat.UNSIGNED_INT:  # else unsigned int
                         data_size = 3 * 4
-                        data_format = 'I'*3
+                        data_format = 'I' * 3
                     buf = f.read(data_size)
                     if not buf:
                         break
                     idx0, idx1, idx2 = struct.unpack(data_format, buf)
                     faces[i] = [idx0, idx1, idx2]
-                    if args.mode == "TRIANGLE_STRIP":
-                        if args.order == 'CCW':
+                    if mode == DrawElementsMode.TRIANGLE_STRIP:
+                        if face_order == FaceOrder.CCW:
                             if i % 2:
                                 faces[i] = [idx2, idx1, idx0]
                             else:
@@ -102,14 +155,14 @@ if __name__ == '__main__':
                             else:
                                 faces[i] = [idx2, idx1, idx0]
 
-                        f.seek(f.tell() - int(2*(data_size/3)))
-                        if f.tell() + 2*(data_size/3) == file_size:
+                        f.seek(f.tell() - int(2 * (data_size / 3)))
+                        if f.tell() + 2 * (data_size / 3) == file_size:
                             break
-                    elif args.mode == "TRIANGLES":
+                    elif mode == DrawElementsMode.TRIANGLES:
                         faces[i] = [idx0, idx1, idx2]
                     byte_count += data_size
                     i += 1
-                elif args.type == "positions":
+                elif data_type == DataType.indicespositions:
                     buf = f.read(3 * 4)  # assume vertex positions are floats
                     if not buf:
                         break
@@ -117,8 +170,8 @@ if __name__ == '__main__':
                     print(VERTEX_FORMAT % (f1, f2, f3))
                     byte_count += 3 * 4
                     # apply stride
-                    f.seek(f.tell() + args.stride - 3*4)
-                elif args.type == 'texcoords':
+                    f.seek(f.tell() + args.stride - 3 * 4)
+                elif data_type == DataType.texcoords:
                     next_read_address = f.tell() + args.stride
                     f.read(args.skip)
                     buf = f.read(2 * 4)  # assume texture coordinates are floats
@@ -129,12 +182,14 @@ if __name__ == '__main__':
                     byte_count += 2 * 4
                     f.seek(next_read_address)
             for key, value in faces.items():
-                print(INDEX_FORMAT2 % (value[0] + 1, value[0] + 1, value[1] + 1, value[1] + 1, value[2] + 1, value[2] + 1))  # wavefront obj index starts at 1
+                print(INDEX_FORMAT2 % (
+                    value[0] + 1, value[0] + 1, value[1] + 1, value[1] + 1, value[2] + 1,
+                    value[2] + 1))  # wavefront obj index starts at 1
         print("# number of bytes", byte_count)
-    elif extension == "csv":
+    elif input_type == InputType.csv:
         df = pd.read_csv(args.file)
         csv_header = ast.literal_eval(args.csv_header)
-        if args.mode == "TRIANGLE_STRIP":
+        if mode == DrawElementsMode.TRIANGLE_STRIP:
             for i, row in df.iterrows():
                 if i < 2:
                     pass
@@ -143,14 +198,14 @@ if __name__ == '__main__':
                     idx1 = int(df.iloc[i - 1, csv_header['vertex_index']])
                     idx2 = int(df.iloc[i, csv_header['vertex_index']])
 
-                    x, y, z = df.iloc[i-2, csv_header['position_x']:csv_header['position_z']+1]
+                    x, y, z = df.iloc[i - 2, csv_header['position_x']:csv_header['position_z'] + 1]
                     vertices[idx0] = [x, y, z]
-                    x, y, z = df.iloc[i-1, csv_header['position_x']:csv_header['position_z']+1]
+                    x, y, z = df.iloc[i - 1, csv_header['position_x']:csv_header['position_z'] + 1]
                     vertices[idx1] = [x, y, z]
-                    x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
+                    x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z'] + 1]
                     vertices[idx2] = [x, y, z]
 
-                    if args.order == 'CCW':
+                    if face_order == FaceOrder.CCW:
                         if i % 2:
                             faces[face] = [idx2, idx1, idx0]
                             face += 1
@@ -164,45 +219,60 @@ if __name__ == '__main__':
                         else:
                             faces[face] = [idx2, idx1, idx0]
                             face += 1
-        elif args.mode == "TRIANGLES":
+        elif mode == DrawElementsMode.TRIANGLES:
             for i in range(0, df.shape[0], 3):
-                idx0 = int(df.iloc[i, csv_header['vertex_index']])
-                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
-                vertices[idx0] = [x,y,z]
-                i += 1
-                idx1 = int(df.iloc[i, csv_header['vertex_index']])
-                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
-                vertices[idx1] = [x, y, z]
-                i += 1
-                idx2 = int(df.iloc[i, csv_header['vertex_index']])
-                x, y, z = df.iloc[i, csv_header['position_x']:csv_header['position_z']+1]
-                vertices[idx2] = [x, y, z]
+                def extract(idx): return (int(df.iloc[idx, csv_header['vertex_index']]),
+                                          df.iloc[idx,
+                                          csv_header['position_x']:csv_header['position_z'] + 1],
+                                          df.iloc[idx, csv_header['texcoord_x']:csv_header['texcoord_y'] + 1] if 'texcoord_x' in csv_header and 'texcoord_y' in csv_header else ())
+
+
+                idx0, vert0, tex0 = extract(i)
+                vertices[idx0] = [*vert0]
+                texture_coords[idx0] = [*tex0]
+                idx1, vert1, tex1 = extract(i + 1)
+                vertices[idx1] = [*vert1]
+                texture_coords[idx1] = [*tex1]
+                idx2, vert2, tex2 = extract(i + 2)
+                vertices[idx2] = [*vert2]
+                texture_coords[idx2] = [*tex2]
+
                 faces[face] = [idx0, idx1, idx2]
                 face += 1
-        for key, value in faces.items():
-            print(INDEX_FORMAT % (value[0]+1, value[1]+1, value[2]+1))  # wavefront obj index starts at 1
+        if 'texcoord_x' in csv_header and 'texcoord_y' in csv_header:
+            for key, value in faces.items():
+                print(INDEX_FORMAT2 % (value[0] + 1, value[0] + 1, value[1] + 1, value[1] + 1, value[2] + 1,
+                    value[2] + 1))  # wavefront obj index starts at 1
+        else:
+            for key, value in faces.items():
+                print(INDEX_FORMAT % (value[0] + 1, value[1] + 1, value[2] + 1))  # wavefront obj index starts at 1
         for key, value in vertices.items():
             print(VERTEX_FORMAT % (value[0], value[1], value[2]))
-    elif extension == "html":
+        if 'texcoord_x' in csv_header and 'texcoord_y' in csv_header:
+            for key, value in texture_coords.items():
+                print(TEXTURE_COORDS % (value[0], 1.0 - value[1]))  # TODO allow to take value directly or make the adjustment via command line flag
+    elif input_type == InputType.html:
         df = pd.read_html(path, header=None)[0]
         print("#", df.shape)
-        if args.type == "indices":
-            if args.mode == "TRIANGLE_STRIP":
+        if data_type == DataType.indices:
+            if mode == DrawElementsMode.TRIANGLE_STRIP:
                 for i, row in df.iterrows():
                     if i < 2:
                         pass
                     else:
-                        v0,v1,v2 = (df[1][i-2]+1, df[1][i-1]+1, df[1][i]+1)
+                        v0, v1, v2 = (df[1][i - 2] + 1, df[1][i - 1] + 1, df[1][i] + 1)
                         if v0 == v1 or v1 == v2 or v0 == v2:
                             pass
                         if i % 2:
-                            print("f %i %i %i" % (v2,v1,v0))
+                            print("f %i %i %i" % (v2, v1, v0))
                         else:
-                            print("f %i %i %i" % (v0,v1,v2))
-            elif args.mode == "TRIANGLES":
+                            print("f %i %i %i" % (v0, v1, v2))
+            elif mode == DrawElementsMode.TRIANGLES:
                 for i in range(0, df.shape[0], 3):
-                    v0,v1,v2 = (df[1][i]+1, df[1][i+1]+1, df[1][i+2]+1)
-                    print("f %i %i %i" % (v0,v1,v2))
-        elif args.type == "positions":            
+                    v0, v1, v2 = (df[1][i] + 1, df[1][i + 1] + 1, df[1][i + 2] + 1)
+                    print("f %i %i %i" % (v0, v1, v2))
+        elif data_type == DataType.positions:
             for i, row in df.iterrows():
                 print("v %f %f %f" % (row[1], row[2], row[3]))
+    else:
+        print("Not valid input type")
