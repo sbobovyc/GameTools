@@ -1,6 +1,7 @@
 import argparse
 import sys
 import os
+import subprocess
 import pymem.process
 import win32api
 import win32con
@@ -33,13 +34,13 @@ def find_pid_by_name(name):
     return None
 
 
-def create_suspended_process(exe_path):
+def create_suspended_process(exe_path, command_line=None):
     startup_info = win32process.STARTUPINFO()
     current_directory = os.path.dirname(exe_path)
     try:
         process_information = win32process.CreateProcess(
             exe_path,
-            None,
+            command_line,
             None,
             None,
             False,
@@ -60,6 +61,12 @@ def main():
     parser.add_argument('-e', '--exe', type=str, help='Executable')
     parser.add_argument('-d', '--dll', default=None, help='DLL file')
     parser.add_argument('-l', '--list', default=False, action='store_true', help='List processes')
+    parser.add_argument(
+        '--exe-command-line',
+        nargs=argparse.REMAINDER,
+        default=None,
+        help='Pass the executable path and optional remaining arguments as the launch command line',
+    )
 
     args = parser.parse_args()
 
@@ -75,16 +82,22 @@ def main():
     if sum(targets) != 1:
         parser.error("exactly one of --pid, --name, or --exe is required")
 
+    if args.exe_command_line is not None and args.exe is None:
+        parser.error("--exe-command-line requires --exe")
+
     dll_full_path = os.path.abspath(args.dll)
 
     if args.exe is not None:
         # Launch paused process, inject the DLL, then resume the target's primary thread.
         exe_full_path = os.path.abspath(args.exe)
+        command_line = None
+        if args.exe_command_line is not None:
+            command_line = subprocess.list2cmdline([exe_full_path] + args.exe_command_line)
         process_information = None
         resumed = False
         try:
             try:
-                process_information = create_suspended_process(exe_full_path)
+                process_information = create_suspended_process(exe_full_path, command_line)
             except RuntimeError as error:
                 parser.error(str(error))
             process_handle, thread_handle, pid, _thread_id = process_information
@@ -117,5 +130,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
